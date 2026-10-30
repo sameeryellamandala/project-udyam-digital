@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#f7f7f2" />
+  <title>Accel Business | Udyam Digital</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="topbar"><a class="brand" href="/"><span class="brand-mark">a</span><span>accel<span class="brand-light"> business</span></span></a><div class="top-actions"><span class="secure"><span class="secure-dot"></span><span id="mode">Connecting…</span></span><label class="sr-only" for="language">Language</label><select class="language" id="language"><option value="en">English</option><option value="hi">हिन्दी</option></select></div></header>
+  <div class="demo-banner">Udyam Digital · Hackathon prototype · Fictional businesses and mock registries</div>
+  <main class="shell">
+    <aside class="side"><div class="side-label">YOUR BUSINESS SETUP</div><nav id="steps" aria-label="Setup progress"><button class="step active" data-step="0"><span class="step-num">01</span><span><b>Business needs</b><small>Start here</small></span><span class="step-check">✓</span></button><button class="step" data-step="1"><span class="step-num">02</span><span><b>Your package</b><small>A plan that fits</small></span><span class="step-check">✓</span></button><button class="step" data-step="2"><span class="step-num">03</span><span><b>Contact details</b><small>For your order</small></span><span class="step-check">✓</span></button><button class="step" data-step="3"><span class="step-num">04</span><span><b>Verify documents</b><small>With your consent</small></span><span class="step-check">✓</span></button><button class="step" data-step="4"><span class="step-num">05</span><span><b>Track your order</b><small>Stay up to date</small></span><span class="step-check">✓</span></button></nav><div class="help"><div class="help-icon">✳</div><b>Progress you can trust</b><p>Unclear documents go to assisted review. You'll always see what still needs checking.</p></div><div class="privacy-note">Only share synthetic data in this prototype.</div></aside>
+    <section class="content"><div class="welcome"><div class="eyebrow"><span></span> YOUR BUSINESS, CONNECTED</div><h1 id="title" tabindex="-1">Let’s find your business setup.</h1><p id="subtitle">Connecting to your local project…</p></div><div id="activity" class="activity" role="status" aria-live="polite" hidden></div><div id="view"></div><footer>© 2026 Accel Business <button class="text-btn" id="privacy">Privacy choices</button></footer></section>
+    <aside class="summary"><div class="summary-head"><span>YOUR SETUP</span><span class="summary-icon">✳</span></div><div class="summary-empty" id="sum-empty"><div class="sum-art"><span>⌁</span><i>✳</i></div><b>Made for your business</b><p>Your personal recommendation will show up here as you go.</p></div><div id="sum-filled" hidden></div><div class="summary-foot"><span>Prices and rules from the provided catalogue</span><span>One clear quote · No automatic purchases</span></div></aside>
+  </main><div class="toast" id="toast" role="status" aria-live="polite"></div><dialog id="privacy-dialog"><h2>Your privacy choices</h2><p>We collect business needs to recommend services. Contact details and documents are requested for your order only. KYC requires your consent.</p><p>Local document reading runs on this computer using an installed English OCR model. Raw uploaded images are not saved. Optional external image extraction sends them to OpenAI only with separate consent; its data policies apply. Advisor messages go to the selected provider (Groq for testing) when configured, so keep personal identifiers out of chat.</p><p>Saved contacts, masked verification results and orders stay in this local browser session's server records for up to seven days. You can delete your orders in the tracker. This local prototype uses synthetic data and is not a production identity service.</p><button class="btn" id="close-privacy">Close</button></dialog><script type="module" src="app.js"></script>
+</body>
+</html>

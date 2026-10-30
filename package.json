@@ -1,0 +1,20 @@
+{
+  "name": "udyam-digital",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=24.0.0"
+  },
+  "scripts": {
+    "start": "node server.mjs",
+    "test": "node --test tests/*.test.mjs",
+    "analyze": "node scripts/analyze-leads.mjs",
+    "check:documents": "node scripts/check-documents.mjs",
+    "check:ai": "node scripts/check-ai.mjs"
+  },
+  "dependencies": {
+    "@tesseract.js-data/eng": "^1.0.0",
+    "tesseract.js": "^7.0.0"
+  }
+}

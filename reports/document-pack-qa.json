@@ -1,0 +1,544 @@
+{
+  "summary": {
+    "total": 47,
+    "readable": 44,
+    "needsClearerImage": 3,
+    "withReviewSignals": 11
+  },
+  "referenceDate": "2026-07-15",
+  "scope": "Student-supplied images only. Extraction/readability and registry/date signals, not a judge answer key or authenticity assessment. Does not establish signatory authority or cross-document identity.",
+  "results": [
+    {
+      "sample": "K01_address_proof.png",
+      "kind": "address",
+      "readable": true,
+      "fieldsPresent": [
+        "businessName",
+        "address",
+        "documentDate"
+      ],
+      "findings": []
+    },
+    {
+      "sample": "K01_gst_certificate.png",
+      "kind": "gst",
+      "readable": true,
+      "fieldsPresent": [
+        "businessName",
+        "gstin",
+        "address"
+      ],
+      "findings": [
+        "GST registry is not active"
+      ]
+    },
+    {
+      "sample": "K01_signatory_id.png",
+      "kind": "signatory",
+      "readable": true,
+      "fieldsPresent": [
+        "businessName",
+        "signatoryName",
+        "validTill"
+      ],
+      "findings": []
+    },
+    {
+      "sample": "K01_udyam_certificate.png",
+      "kind": "udyam",
+      "readable": false,
+      "fieldsPresent": [
+        "businessName"
+      ],
+      "findings": [
+        "Clearer image or manual review needed",
+        "Extracted Udyam not matched to mock registry"
+      ]
+    },
+    {
+      "sample": "K02_address_proof.png",
+      "kind": "address",
+      "readable": true,
+      "fieldsPresent": [
+        "businessName",
+        "address",
+        "documentDate"
+      ],
+      "findings": []
+    },
+    {
+      "sample": "K02_gst_certificate.png",
+      "kind": "gst",
+      "readable": false,
+      "fieldsPresent": [
+        "gstin"
+      ],
+      "findings": [
+        "Clearer image or manual review needed",
+        "GST format/checksum not read correctly",
+        "Extracted GST not matched to mock registry"
+      ]
+    },
+    {
+      "sample": "K02_signatory_id.png",
+      "kind": "signatory",
+      "readable": true,
+      "fieldsPresent": [
+        "businessName",
+        "signatoryName",
+        "validTill"
+      ],
+      "findings": []
+    },
+    {
+      "sample": "K02_udyam_certificate.png",
+      "kind": "udyam",
+      "readable": true,
+      "fieldsPresent": [
+        "businessName",
+        "udyam"
+      ],
+      "findings": []
+    },
+    {
+      "sample": "K03_address_proof.png",
+      "kind": "address",
+      "readable": true,
+      "fieldsPresent": [
+        "businessName",
+        "address",
+        "documentDate"
+      ],
+      "findings": []
+    },
+    {
+      "sample": "K03_gst_certificate.png",
+      "kind": "gst",
+      "readable": true,
+      "fieldsPresent": [
+        "businessName",
+        "gstin",
+        "address"
+      ],
+      "findings": [
+        "GST format/checksum not read correctly",
+        "Extracted GST not matched to mock registry"
+      ]
+    },
+    {
+      "sample": "K03_signatory_id.png",
+      "kind": "signatory",
+      "readable": true,
+      "fieldsPresent": [
+        "businessName",
+        "signatoryName",
+        "validTill"
+      ],
+      "findings": []
+    },
+    {
+      "sample": "K03_udyam_certificate.png",
+      "kind": "udyam",
+      "readable": true,
+      "fieldsPresent": [
+        "businessName",
+        "udyam"
+      ],
+      "findings": []
+    },
+    {
+      "sample": "K04_address_proof.png",
+      "kind": "address",
+      "readable": true,
+      "fieldsPresent": [
+        "businessName",
+        "address",
+        "documentDate"
+      ],
+      "findings": []
+    },
+    {
+      "sample": "K04_gst_certificate.png",
+      "kind": "gst",
+      "readable": false,
+      "fieldsPresent": [],
+      "findings": [
+        "Clearer image or manual review needed",
+        "GST format/checksum not read correctly",
+        "Extracted GST not matched to mock registry"
+      ]
+    },
+    {
+      "sample": "K04_signatory_id.png",
+      "kind": "signatory",
+      "readable": true,
+      "fieldsPresent": [
+        "businessName",
+        "signatoryName",
+        "validTill"
+      ],
+      "findings": []
+    },
+    {
+      "sample": "K04_udyam_certificate.png",
+      "kind": "udyam",
+      "readable": true,
+      "fieldsPresent": [
+        "businessName",
+        "udyam"
+      ],
+      "findings": []
+    },
+    {
+      "sample": "K05_address_proof.png",
+      "kind": "address",
+      "readable": true,
+      "fieldsPresent": [
+        "businessName",
+        "address",
+        "documentDate"
+      ],
+      "findings": []
+    },
+    {
+      "sample": "K05_gst_certificate.png",
+      "kind": "gst",
+      "readable": true,
+      "fieldsPresent": [
+        "businessName",
+        "gstin",
+        "address"
+      ],
+      "findings": [
+        "GST format/checksum not read correctly",
+        "Extracted GST not matched to mock registry"
+      ]
+    },
+    {
+      "sample": "K05_signatory_id.png",
+      "kind": "signatory",
+      "readable": true,
+      "fieldsPresent": [
+        "businessName",
+        "signatoryName",
+        "validTill"
+      ],
+      "findings": []
+    },
+    {
+      "sample": "K06_address_proof.png",
+      "kind": "address",
+      "readable": true,
+      "fieldsPresent": [
+        "businessName",
+        "address",
+        "documentDate"
+      ],
+      "findings": []
+    },
+    {
+      "sample": "K06_gst_certificate.png",
+      "kind": "gst",
+      "readable": true,
+      "fieldsPresent": [
+        "businessName",
+        "gstin",
+        "address"
+      ],
+      "findings": [
+        "GST format/checksum not read correctly",
+        "Extracted GST not matched to mock registry"
+      ]
+    },
+    {
+      "sample": "K06_signatory_id.png",
+      "kind": "signatory",
+      "readable": true,
+      "fieldsPresent": [
+        "businessName",
+        "signatoryName",
+        "validTill"
+      ],
+      "findings": []
+    },
+    {
+      "sample": "K06_udyam_certificate.png",
+      "kind": "udyam",
+      "readable": true,
+      "fieldsPresent": [
+        "businessName",
+        "udyam"
+      ],
+      "findings": []
+    },
+    {
+      "sample": "K07_address_proof.png",
+      "kind": "address",
+      "readable": true,
+      "fieldsPresent": [
+        "businessName",
+        "address",
+        "documentDate"
+      ],
+      "findings": []
+    },
+    {
+      "sample": "K07_gst_certificate.png",
+      "kind": "gst",
+      "readable": true,
+      "fieldsPresent": [
+        "businessName",
+        "gstin",
+        "address"
+      ],
+      "findings": [
+        "GST format/checksum not read correctly",
+        "Extracted GST not matched to mock registry"
+      ]
+    },
+    {
+      "sample": "K07_signatory_id.png",
+      "kind": "signatory",
+      "readable": true,
+      "fieldsPresent": [
+        "businessName",
+        "signatoryName",
+        "validTill"
+      ],
+      "findings": []
+    },
+    {
+      "sample": "K07_udyam_certificate.png",
+      "kind": "udyam",
+      "readable": true,
+      "fieldsPresent": [
+        "businessName",
+        "udyam"
+      ],
+      "findings": []
+    },
+    {
+      "sample": "K08_address_proof.png",
+      "kind": "address",
+      "readable": true,
+      "fieldsPresent": [
+        "businessName",
+        "address",
+        "documentDate"
+      ],
+      "findings": []
+    },
+    {
+      "sample": "K08_gst_certificate.png",
+      "kind": "gst",
+      "readable": true,
+      "fieldsPresent": [
+        "businessName",
+        "gstin",
+        "address"
+      ],
+      "findings": [
+        "GST format/checksum not read correctly",
+        "Extracted GST not matched to mock registry"
+      ]
+    },
+    {
+      "sample": "K08_signatory_id.png",
+      "kind": "signatory",
+      "readable": true,
+      "fieldsPresent": [
+        "businessName",
+        "signatoryName",
+        "validTill"
+      ],
+      "findings": []
+    },
+    {
+      "sample": "K08_udyam_certificate.png",
+      "kind": "udyam",
+      "readable": true,
+      "fieldsPresent": [
+        "businessName",
+        "udyam"
+      ],
+      "findings": []
+    },
+    {
+      "sample": "K09_address_proof.png",
+      "kind": "address",
+      "readable": true,
+      "fieldsPresent": [
+        "businessName",
+        "address",
+        "documentDate"
+      ],
+      "findings": []
+    },
+    {
+      "sample": "K09_gst_certificate.png",
+      "kind": "gst",
+      "readable": true,
+      "fieldsPresent": [
+        "businessName",
+        "gstin",
+        "address"
+      ],
+      "findings": []
+    },
+    {
+      "sample": "K09_signatory_id.png",
+      "kind": "signatory",
+      "readable": true,
+      "fieldsPresent": [
+        "businessName",
+        "signatoryName",
+        "validTill"
+      ],
+      "findings": []
+    },
+    {
+      "sample": "K09_udyam_certificate.png",
+      "kind": "udyam",
+      "readable": true,
+      "fieldsPresent": [
+        "businessName",
+        "udyam"
+      ],
+      "findings": []
+    },
+    {
+      "sample": "K10_address_proof.png",
+      "kind": "address",
+      "readable": true,
+      "fieldsPresent": [
+        "businessName",
+        "address",
+        "documentDate"
+      ],
+      "findings": []
+    },
+    {
+      "sample": "K10_gst_certificate.png",
+      "kind": "gst",
+      "readable": true,
+      "fieldsPresent": [
+        "businessName",
+        "gstin",
+        "address"
+      ],
+      "findings": [
+        "GST format/checksum not read correctly",
+        "Extracted GST not matched to mock registry"
+      ]
+    },
+    {
+      "sample": "K10_signatory_id.png",
+      "kind": "signatory",
+      "readable": true,
+      "fieldsPresent": [
+        "businessName",
+        "signatoryName",
+        "validTill"
+      ],
+      "findings": []
+    },
+    {
+      "sample": "K10_udyam_certificate.png",
+      "kind": "udyam",
+      "readable": true,
+      "fieldsPresent": [
+        "businessName",
+        "udyam"
+      ],
+      "findings": []
+    },
+    {
+      "sample": "K11_address_proof.png",
+      "kind": "address",
+      "readable": true,
+      "fieldsPresent": [
+        "businessName",
+        "address",
+        "documentDate"
+      ],
+      "findings": [
+        "Address date unreadable, future-dated or older than 90 days"
+      ]
+    },
+    {
+      "sample": "K11_gst_certificate.png",
+      "kind": "gst",
+      "readable": true,
+      "fieldsPresent": [
+        "businessName",
+        "gstin",
+        "address"
+      ],
+      "findings": []
+    },
+    {
+      "sample": "K11_signatory_id.png",
+      "kind": "signatory",
+      "readable": true,
+      "fieldsPresent": [
+        "businessName",
+        "signatoryName",
+        "validTill"
+      ],
+      "findings": []
+    },
+    {
+      "sample": "K11_udyam_certificate.png",
+      "kind": "udyam",
+      "readable": true,
+      "fieldsPresent": [
+        "businessName",
+        "udyam"
+      ],
+      "findings": []
+    },
+    {
+      "sample": "K12_address_proof.png",
+      "kind": "address",
+      "readable": true,
+      "fieldsPresent": [
+        "businessName",
+        "address",
+        "documentDate"
+      ],
+      "findings": []
+    },
+    {
+      "sample": "K12_gst_certificate.png",
+      "kind": "gst",
+      "readable": true,
+      "fieldsPresent": [
+        "businessName",
+        "gstin",
+        "address"
+      ],
+      "findings": []
+    },
+    {
+      "sample": "K12_signatory_id.png",
+      "kind": "signatory",
+      "readable": true,
+      "fieldsPresent": [
+        "businessName",
+        "signatoryName",
+        "validTill"
+      ],
+      "findings": []
+    },
+    {
+      "sample": "K12_udyam_certificate.png",
+      "kind": "udyam",
+      "readable": true,
+      "fieldsPresent": [
+        "businessName",
+        "udyam"
+      ],
+      "findings": []
+    }
+  ]
+}
