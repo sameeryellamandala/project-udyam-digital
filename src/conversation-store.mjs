@@ -64,17 +64,22 @@ export function createConversationStore(connectionString,options={}){
   async remove(owner,id){return transaction(async c=>{await own(c,owner,id,true);await c.query('DELETE FROM advisor_sessions WHERE id=$1',[id]);return {deleted:true};});},
   async turn(owner,id,requestId,message,action){return transaction(async c=>{
    const session=await own(c,owner,id,true);if(session.status!=='active')throw new AppError('This conversation is closed.',409);
-   const prior=(await c.query('SELECT response FROM advisor_turns WHERE session_id=$1 AND request_id=$2',[id,requestId])).rows[0];if(prior)return prior.response;
+   const prior=(await c.query('SELECT response FROM advisor_turns WHERE session_id=$1 AND request_id=$2',[id,requestId])).rows[0];
+   const retryingFailedTurn=!!prior&&prior.response?.mode==='unavailable';
+   if(prior&&!retryingFailedTurn)return prior.response;
    const record=(await c.query('SELECT state,revision FROM advisor_requirements WHERE session_id=$1',[id])).rows[0],saved=record.state;
    const history=(await c.query('SELECT role,content FROM advisor_messages WHERE session_id=$1 ORDER BY id DESC LIMIT 10',[id])).rows.reverse();
-   const result=await action(saved,[...history,{role:'user',content:message}]);
+   const turnHistory=retryingFailedTurn?history.slice(0,-1):[...history,{role:'user',content:message}];
+   const result=await action(saved,turnHistory);
    const next={...saved,...(result.conversationState||saved)};delete result.conversationState;
    if(JSON.stringify([saved.profile,saved.details])!==JSON.stringify([next.profile,next.details]))next.selectedProducts=[];
    const changed=JSON.stringify([next.profile,next.details,next.form])!==JSON.stringify([saved.profile,saved.details,saved.form]);result.revision=record.revision+(changed?1:0);
-   await c.query('INSERT INTO advisor_messages(session_id,role,content) VALUES($1,$2,$3),($1,$4,$5)',[id,'user',message,'assistant',result.reply||'AI is unavailable. Please retry later.']);
+   if(retryingFailedTurn)await c.query('UPDATE advisor_messages SET content=$2 WHERE id=(SELECT id FROM advisor_messages WHERE session_id=$1 AND role=$3 ORDER BY id DESC LIMIT 1)',[id,result.reply||'The advisor is temporarily unavailable. Please retry.','assistant']);
+   else await c.query('INSERT INTO advisor_messages(session_id,role,content) VALUES($1,$2,$3),($1,$4,$5)',[id,'user',message,'assistant',result.reply||'The advisor is temporarily unavailable. Please retry.']);
    await c.query('UPDATE advisor_requirements SET state=$2,revision=$3,updated_at=now() WHERE session_id=$1',[id,next,result.revision]);
    await c.query("UPDATE advisor_sessions SET updated_at=now(),title=CASE WHEN title='New conversation' THEN $2 ELSE title END WHERE id=$1",[id,message.slice(0,70)]);
-   await c.query('INSERT INTO advisor_turns(session_id,request_id,response) VALUES($1,$2,$3)',[id,requestId,result]);
+   if(retryingFailedTurn)await c.query('UPDATE advisor_turns SET response=$3 WHERE session_id=$1 AND request_id=$2',[id,requestId,result]);
+   else await c.query('INSERT INTO advisor_turns(session_id,request_id,response) VALUES($1,$2,$3)',[id,requestId,result]);
    return result;
   });}
  };

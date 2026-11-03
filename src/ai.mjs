@@ -1,6 +1,52 @@
 import { runAdvisorGraph } from './advisor-graph.mjs';
 import { AppError, eligibility } from './catalogue.mjs';
 import { guidedAdvisor } from './guided.mjs';
+import { AsyncLocalStorage } from 'node:async_hooks';
+
+const aiRequestContext = new AsyncLocalStorage();
+let providerInFlight = 0;
+const providerQueue = [];
+const MAX_PROVIDER_CONCURRENCY = 2;
+const MAX_PROVIDER_RETRIES = 2;
+const MAX_RETRY_AFTER_MS = 20_000;
+
+async function withProviderSlot(action) {
+  if (providerInFlight >= MAX_PROVIDER_CONCURRENCY) await new Promise(resolve => providerQueue.push(resolve));
+  providerInFlight++;
+  try { return await action(); }
+  finally { providerInFlight--; providerQueue.shift()?.(); }
+}
+const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+function retryDelay(response, retryIndex) {
+  const raw = response.headers.get('retry-after');
+  let providerWait = 0;
+  if (raw) {
+    const seconds = Number(raw);
+    providerWait = Number.isFinite(seconds) ? seconds * 1000 : Math.max(0, Date.parse(raw) - Date.now());
+  }
+  const exponential = Math.min(10_000, 500 * (2 ** retryIndex));
+  const jitter = Math.floor(Math.random() * Math.max(100, exponential * 0.25));
+  return Math.min(MAX_RETRY_AFTER_MS, Math.max(providerWait, exponential) + jitter);
+}
+function aiLog(fields) {
+  console.info(JSON.stringify({ event: 'ai_provider_request', ...aiRequestContext.getStore(), ...fields }));
+}
+function validationIssues(value, schema, path = '$', out = []) {
+  if (out.length >= 12) return out;
+  if (schema.type === 'object') {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) { out.push(`${path}:expected_object`); return out; }
+    for (const key of schema.required || []) if (!Object.hasOwn(value, key)) out.push(`${path}.${key}:missing`);
+    for (const [key, child] of Object.entries(schema.properties || {})) if (Object.hasOwn(value, key)) validationIssues(value[key], child, `${path}.${key}`, out);
+    if (schema.additionalProperties === false) for (const key of Object.keys(value)) if (!Object.hasOwn(schema.properties || {}, key)) out.push(`${path}.${key}:unexpected`);
+  } else if (schema.type === 'array') {
+    if (!Array.isArray(value)) out.push(`${path}:expected_array`);
+    else value.slice(0, 20).forEach((item, index) => validationIssues(item, schema.items || {}, `${path}[${index}]`, out));
+  } else if (schema.type === 'integer' && !Number.isInteger(value)) out.push(`${path}:expected_integer`);
+  else if (schema.type === 'string' && typeof value !== 'string') out.push(`${path}:expected_string`);
+  else if (schema.type === 'boolean' && typeof value !== 'boolean') out.push(`${path}:expected_boolean`);
+  if (schema.enum && !schema.enum.includes(value)) out.push(`${path}:invalid_enum`);
+  return out.slice(0, 12);
+}
 
 const scalar = type => ({ type });
 const object = properties => ({ type: 'object', properties, required: Object.keys(properties), additionalProperties: false });
@@ -14,7 +60,7 @@ export function conforms(value,schema){
   return true;
 }
 function parsedOutput(text,schema,name=''){
- let result;try{result=JSON.parse(text);}catch{throw new AppError('AI returned an unreadable response.',503,'AI_UNAVAILABLE');}
+ let result;try{result=JSON.parse(text);}catch{const error=new AppError('AI returned an unreadable response.',503,'AI_INVALID_REPLY');error.validationIssues=['$:invalid_json'];throw error;}
  // Unknown discovery fields are placeholders, never eligibility facts. Normalize
  // nullable placeholders without accepting invalid customer-confirmed facts.
  if(name==='advisor_requirements'&&result&&typeof result==='object'){
@@ -24,7 +70,7 @@ function parsedOutput(text,schema,name=''){
   const defaults={segment:'prof',employees:1,sites:1,cityTier:1,budget:1,needs:['internet'],currentTools:'',city:'',gstStatus:'unknown',mobileLines:0,emailAccounts:0,internetPreference:'any',selectedProductIds:[]};
   for(const [k,v] of Object.entries(defaults))if(result[k]===null&&!known.includes(k))result[k]=v;
  }
- if(!conforms(result,schema))throw new AppError('AI returned an invalid structured response.',503,'AI_INVALID_REPLY');return result;
+ if(!conforms(result,schema)){const error=new AppError('AI returned an invalid structured response.',503,'AI_INVALID_REPLY');error.validationIssues=validationIssues(result,schema);throw error;}return result;
 }
 
 export function checkedReply(reply,quote,budget,catalogue=[]){
@@ -46,8 +92,10 @@ export function redact(value) {
     .replace(/\b(?:\+?91[ -]?)?[6-9]\d{9}\b/g, '[phone hidden]')
     .replace(/\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi, '[email hidden]');
 }
-export async function structured(config, name, schema, instructions, input) {
+export async function structured(config, name, schema, instructions, input, context={}) {
   if (!config.apiKey) throw new AppError('AI is not configured.', 503, 'AI_UNAVAILABLE');
+  const requestContext = { ...context, provider: config.provider, model: config.model };
+  const runProvider = action => aiRequestContext.run(requestContext, () => withProviderSlot(action));
   if(config.provider==='ollama') {
     const response=await fetch('http://127.0.0.1:11434/api/chat',{
       method:'POST',signal:AbortSignal.timeout(180000),headers:{'Content-Type':'application/json'},
@@ -60,9 +108,34 @@ export async function structured(config, name, schema, instructions, input) {
   }
   if(config.provider==='groq') {
     const payload={model:config.model,max_completion_tokens:2500,reasoning_effort:'low',temperature:0.2,messages:[{role:'system',content:instructions},...input],response_format:{type:'json_schema',json_schema:{name,strict:true,schema}}};
-    const request=()=>fetch('https://api.groq.com/openai/v1/chat/completions',{
+    let providerRetriesRemaining=MAX_PROVIDER_RETRIES;
+    const request=()=>runProvider(async()=>{
+      const started=Date.now();
+      let response,attempt=0;
+      while(true){
+        attempt++;
+        try {
+          response=await fetch('https://api.groq.com/openai/v1/chat/completions',{
       method:'POST',signal:AbortSignal.timeout(45000),headers:{Authorization:`Bearer ${config.apiKey}`,'Content-Type':'application/json'},
       body:JSON.stringify(payload)
+          });
+        } catch(error) {
+          aiLog({statusCode:0,errorType:error?.name==='TimeoutError'?'timeout':'network_error',inputTokens:null,outputTokens:null,latencyMs:Date.now()-started,retryCount:attempt-1,jsonParse:'not_received'});
+          throw new AppError(error?.name==='TimeoutError'?'AI request timed out. Please retry.':'AI connection failed. Please check your connection and retry.',503,error?.name==='TimeoutError'?'AI_TIMEOUT':'AI_NETWORK_ERROR');
+        }
+        const retryable=response.status===429||[500,502,503,504].includes(response.status);
+        if(retryable&&providerRetriesRemaining>0){
+          providerRetriesRemaining--;
+          const delay=retryDelay(response,attempt-1);
+          aiLog({statusCode:response.status,errorType:response.status===429?'rate_limit_exceeded':'temporary_provider_failure',inputTokens:null,outputTokens:null,latencyMs:Date.now()-started,retryCount:MAX_PROVIDER_RETRIES-providerRetriesRemaining,jsonParse:'not_received',retryDelayMs:delay});
+          await sleep(delay);continue;
+        }
+        const elapsed=Date.now()-started;
+        let providerCode='';if(!response.ok){try{const code=(await response.clone().json()).error?.code;if(/^[a-z_]{1,50}$/.test(code||''))providerCode=code;}catch{}}
+        aiLog({statusCode:response.status,errorType:response.ok?null:response.status===429?'rate_limit_exceeded':providerCode||`http_${response.status}`,inputTokens:null,outputTokens:null,latencyMs:elapsed,retryCount:MAX_PROVIDER_RETRIES-providerRetriesRemaining,jsonParse:'pending',remainingRequests:response.headers.get('x-ratelimit-remaining-requests'),remainingTokens:response.headers.get('x-ratelimit-remaining-tokens'),resetRequests:response.headers.get('x-ratelimit-reset-requests'),resetTokens:response.headers.get('x-ratelimit-reset-tokens')});
+        response.aiLatencyMs=elapsed;response.aiRetryCount=MAX_PROVIDER_RETRIES-providerRetriesRemaining;
+        return response;
+      }
     });
     let response=await request(),retried=false;
     if(response.status===400){
@@ -78,19 +151,31 @@ export async function structured(config, name, schema, instructions, input) {
     }
     if(!response.ok){
       let providerCode='';try{const body=await response.json();if(/^[a-z_]{1,50}$/.test(body.error?.code||''))providerCode=body.error.code;}catch{}
-      throw new AppError(response.status===429?'AI testing limit reached. Use guided mode and retry later.':'Groq is unavailable. Please use guided mode or retry.',503,response.status===429?'AI_RATE_LIMIT':response.status===401?'AI_AUTH_ERROR':'AI_HTTP_'+response.status+(providerCode?'_'+providerCode:''));
+      throw new AppError(response.status===429?'AI advisor rate limit reached. Please retry shortly.':'Groq is temporarily unavailable. Please retry.',503,response.status===429?'AI_RATE_LIMIT':response.status===401?'AI_AUTH_ERROR':'AI_HTTP_'+response.status+(providerCode?'_'+providerCode:''));
     }
     const result=await response.json(),choice=result.choices?.[0];
     if(choice?.finish_reason!=='stop')throw new AppError('AI did not complete the response.',503,'AI_INCOMPLETE');
-    try{return parsedOutput(choice.message.content,schema,name);}catch(error){
-      if(retried)throw error;
+    try{
+      const output=parsedOutput(choice.message.content,schema,name);
+      aiRequestContext.run(requestContext,()=>aiLog({statusCode:response.status,errorType:null,inputTokens:result.usage?.prompt_tokens??null,outputTokens:result.usage?.completion_tokens??null,latencyMs:response.aiLatencyMs,retryCount:response.aiRetryCount+(retried?1:0),jsonParse:'valid'}));
+      return output;
+    }catch(error){
+      const issues=error.validationIssues||[error.code==='AI_INVALID_REPLY'?'$:schema_invalid':'$:invalid_json'];
+      aiRequestContext.run(requestContext,()=>console.warn(JSON.stringify({event:'ai_json_validation',...requestContext,provider:config.provider,model:config.model,result:'invalid',issues,retryCount:retried?1:0})));
       payload.response_format={type:'json_object'};
-      payload.messages[0].content+=' Return exactly one complete JSON object matching this schema, including every required property and no extra properties: '+JSON.stringify(schema);
+      payload.messages[0].content+=' Correct the previous response. Validation errors: '+issues.join('; ')+'. Return exactly one complete JSON object matching this schema, including every required property and no extra properties: '+JSON.stringify(schema);
       const retry=await request();
-      if(!retry.ok)throw new AppError('AI could not complete a valid response.',503,retry.status===429?'AI_RATE_LIMIT':'AI_INVALID_REPLY');
-      const response=await retry.json(),next=response.choices?.[0];
+      if(!retry.ok)throw new AppError(retry.status===429?'AI advisor rate limit reached. Please retry shortly.':'AI could not complete a valid response.',503,retry.status===429?'AI_RATE_LIMIT':'AI_INVALID_REPLY');
+      const retryResult=await retry.json(),next=retryResult.choices?.[0];
       if(next?.finish_reason!=='stop')throw new AppError('AI response was incomplete.',503,'AI_INCOMPLETE');
-      return parsedOutput(next.message.content,schema,name);
+      try {
+        const output=parsedOutput(next.message.content,schema,name);
+        aiRequestContext.run(requestContext,()=>aiLog({statusCode:retry.status,errorType:null,inputTokens:retryResult.usage?.prompt_tokens??null,outputTokens:retryResult.usage?.completion_tokens??null,latencyMs:retry.aiLatencyMs,retryCount:retry.aiRetryCount+1,jsonParse:'valid_after_correction'}));
+        return output;
+      } catch(retryError) {
+        aiRequestContext.run(requestContext,()=>console.warn(JSON.stringify({event:'ai_json_validation',...requestContext,provider:config.provider,model:config.model,result:'invalid_after_correction',issues:retryError.validationIssues||['$:invalid_response'],retryCount:1})));
+        throw retryError;
+      }
     }
   }
   const response = await fetch('https://api.openai.com/v1/responses', {
@@ -105,9 +190,9 @@ export async function structured(config, name, schema, instructions, input) {
   return parsedOutput(output,schema,name);
 }
 
-export async function advisor(config,business,messages,recommendation,data,conversation={},journeyContext={}) {
+export async function advisor(config,business,messages,recommendation,data,conversation={},journeyContext={},requestContext={}) {
   if(!config.apiKey)return guidedAdvisor(business,messages,data);
-  try { return await runAdvisorGraph({config,business,messages,recommendation,data,previous:conversation,api:{structured,checkedReply,redact},journeyContext}); }
+  try { return await runAdvisorGraph({config,business,messages,recommendation,data,previous:conversation,api:{structured:(...args)=>structured(...args,requestContext),checkedReply,redact},journeyContext}); }
   catch(error) { return {mode:'unavailable',fallbackReason:error.code||'AI_UNAVAILABLE',conversationState:conversation}; }
 }
 

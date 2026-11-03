@@ -26,14 +26,14 @@ function journeyStatusReply(message,context,language){
  }
  return null;
 }
-export async function conversationAdvisor(config,state,messages,data,language='en',journeyContext={}){
+export async function conversationAdvisor(config,state,messages,data,language='en',journeyContext={},requestContext={}){
  const previous={...freshMemory(),...state},business={...blankProfile(language),...state.profile,language,gstin:'',udyam:''};
  const raw=messages.at(-1).content;
  const journeyReply=journeyStatusReply(raw,journeyContext,language);
  if(journeyReply)return {mode:config.apiKey?'ai':'guided',reply:journeyReply,replySource:'session_status',intent:'question',proceed:false,conversationState:previous};
  const social=socialReply(raw,language);
  if(social)return {mode:config.apiKey?'ai':'guided',reply:social,replySource:'conversation',intent:'question',proceed:false,conversationState:previous};
- if(config.apiKey){const r=await advisor(config,business,messages,recommend(business,data),data,previous,journeyContext);if(r.conversationState)r.conversationState={...previous,...r.conversationState};if(r.reply)r.reply=redact(r.reply);return r;}
+ if(config.apiKey){const r=await advisor(config,business,messages,recommend(business,data),data,previous,journeyContext,requestContext);if(r.conversationState)r.conversationState={...previous,...r.conversationState};if(r.mode==='unavailable'){const invalid=['AI_INVALID_REPLY','AI_QUOTE_MISMATCH','AI_INCOMPLETE'].includes(r.fallbackReason)||String(r.fallbackReason||'').includes('json_validate_failed');const message=r.fallbackReason==='AI_RATE_LIMIT'?'Our AI advisor is receiving many requests. Please try again shortly.':r.fallbackReason==='AI_NETWORK_ERROR'?'Connection problem. Please check your internet connection.':r.fallbackReason==='AI_TIMEOUT'?'The advisor took too long to respond. Please try again.':invalid?'We couldn’t process that response. Please try again.':'The advisor is temporarily unavailable. Please try again.';r.reply=translateMessage(message,language);}delete r.fallbackReason;if(r.reply)r.reply=redact(r.reply);return r;}
  if(ambiguous(raw))return {mode:'guided',intent:'clarification',reply:'Guided mode: What would you like to increase or change?',proceed:false,conversationState:previous};
  if(/show.*previous.*recommendation|continue.*previous.*discussion/i.test(raw))return {mode:'guided',intent:'question',reply:previous.lastRecommendation||'Guided mode: Your saved requirements are restored. What would you like to discuss next?',options:previous.offers||[],proceed:false,conversationState:previous};
  const d={...previous.details,knownFields:[],selectedProductIds:[],action:'discover',selectionMode:'merge'},text=raw.toLowerCase();
@@ -46,7 +46,8 @@ export async function conversationAdvisor(config,state,messages,data,language='e
  const next={...previous,profile:merged.profile,details:merged.details};delete next.profile.gstin;delete next.profile.udyam;delete next.profile.businessName;
  const r=publicRequirements(next);
  const hi=language==='hi';
- const missing=[['segment','What type of business do you run?'],['employees','How many employees work in your business?'],['sites','How many business locations do you have?'],['cityTier','Is the location Tier 1 or Tier 2?'],['budget','What is your monthly budget?'],['needs','Which services do you need?']].find(([k])=>!merged.details.knownFields.includes(k));
+ let missing=[['segment','What type of business do you run?'],['employees','How many employees work in your business?'],['sites','How many business locations do you have?'],['cityTier','Is the location Tier 1 or Tier 2?'],['budget','What is your monthly budget?'],['needs','Which services do you need?']].find(([k])=>!merged.details.knownFields.includes(k));
+ if(!missing&&merged.profile.needs.includes('cctv')&&(!merged.details.knownFields.includes('cameraCount')||merged.details.cameraCount<1))missing=['cameraCount',hi?'आपको कुल कितने CCTV कैमरे चाहिए? हर स्थान की संख्या भी बता सकते हैं।':'How many CCTV cameras do you need in total? You can also give a count for each location.'];
  const serviceHi={internet:'इंटरनेट',email:'ईमेल',mobile:'बिज़नेस SIM',backup:'बैकअप',security:'सुरक्षा',pos:'बिलिंग',cctv:'CCTV',whatsapp:'WhatsApp',iot:'मशीन IoT'};
  let reply='';
  if(missing){
