@@ -40,9 +40,10 @@ export function profile(raw = {}) {
   if (!['micro', 'prof', 'multi', 'mfg'].includes(raw.segment)) throw new AppError('Choose a business type.');
   if (!Array.isArray(raw.needs) || !raw.needs.length || raw.needs.some(n => !needsList.includes(n))) throw new AppError('Choose at least one supported service.');
   const businessName = text(raw.businessName, 120); if (!businessName) throw new AppError('Business name is required.');
+  const cameraCount=raw.cameraCount===undefined||raw.cameraCount===null||raw.cameraCount===''?null:integer(raw.cameraCount,1,10000,'Camera count');
   return { businessName, segment: raw.segment, employees: integer(raw.employees, 1, 10000, 'Team size'), sites: integer(raw.sites, 1, 1000, 'Locations'),
     cityTier: integer(raw.cityTier, 1, 2, 'City tier'), budget: integer(raw.budget, 1, 10000000, 'Budget'), needs: [...new Set(raw.needs)].sort(),
-    currentTools: text(raw.currentTools || '', 500), language: raw.language === 'hi' ? 'hi' : 'en',
+    cameraCount,currentTools: text(raw.currentTools || '', 500), language: raw.language === 'hi' ? 'hi' : 'en',
     gstin: text(raw.gstin || '', 15).toUpperCase(), udyam: text(raw.udyam || '', 19).toUpperCase() };
 }
 
@@ -77,11 +78,23 @@ export function quote(business, items, data) {
     return { productId: p.id, name: p.name, description: p.description, reason:productReason(p,business,quantity), unit: p.unit, quantity, unitPrice: p.price, unitPriceMax:p.maxPrice, monthly: p.price * quantity, monthlyMax:p.maxPrice*quantity, setup: p.setup * quantity, contractMonths: p.contractMonths, installDays: p.installDays };
   });
   for (const line of lines) { const p = data.products.find(p => p.id === line.productId); if (p.requiresOneOf.length && !p.requiresOneOf.some(id => ids.has(id))) throw new AppError(`${p.name} needs one of: ${p.requiresOneOf.join(', ')}.`, 400, 'MISSING_DEPENDENCY'); }
+  const serviceProducts={internet:['P01','P02','P03','P04','P05','P06'],mobile:['P07','P08'],email:['P16'],backup:['P09','P17'],security:['P20','P21'],pos:['P19'],whatsapp:['P15'],cctv:['P23'],iot:['P24']};
+  const requestedIds=new Set(business.needs.flatMap(need=>serviceProducts[need]||[]));
+  const supportingIds=new Set();
+  for(const line of lines.filter(line=>requestedIds.has(line.productId))){
+    const product=data.products.find(product=>product.id===line.productId);
+    for(const id of product.requiresOneOf)if(ids.has(id))supportingIds.add(id);
+  }
+  for(const line of lines)line.selectionType=requestedIds.has(line.productId)?'requested':supportingIds.has(line.productId)?'supporting':'addon';
+  const breakdown=Object.fromEntries(['requested','supporting','addon'].map(type=>{
+    const selected=lines.filter(line=>line.selectionType===type);
+    return [type,{monthly:selected.reduce((sum,line)=>sum+line.monthly,0),setup:selected.reduce((sum,line)=>sum+line.setup,0)}];
+  }));
   const monthly = lines.reduce((s, x) => s + x.monthly, 0), monthlyMax=lines.reduce((s,x)=>s+x.monthlyMax,0);
   const warnings=[];
   if(monthly>business.budget)warnings.push('The minimum catalogue total exceeds your monthly budget. Remove items or increase your budget before ordering.');
   else if(monthlyMax>business.budget)warnings.push('The catalogue price range may exceed your monthly budget. Confirm the final price before accepting.');
-  return { items: lines, monthly, monthlyMax, checkoutMonthly:monthly, pricingPolicy:'catalogue_minimum_demo_v1',
+  return { items: lines, breakdown, monthly, monthlyMax, checkoutMonthly:monthly, pricingPolicy:'catalogue_minimum_demo_v1',
     pricingNote:'Fixed demo quote uses each supplied catalogue minimum. The catalogue range is shown for reference. A real provider must confirm price and availability.',
     setup: lines.reduce((s, x) => s + x.setup, 0), contractMonths: Math.max(...lines.map(x => x.contractMonths)), installDays: Math.max(...lines.map(x => x.installDays)),
     taxNote: 'Fixed demo quote uses catalogue minimums. Setup is one-time; taxes are excluded.', warnings };
@@ -94,7 +107,7 @@ export function productReason(p,b,q) {
 }
 
 export function recommend(business, data) {
-  return recommendForNeeds(business,data,{});
+  return recommendForNeeds(business,data,{cameraCount:business.cameraCount});
 }
 
 export function recommendForNeeds(business, data, requestedQuantities = {}) {
@@ -102,7 +115,10 @@ export function recommendForNeeds(business, data, requestedQuantities = {}) {
   const groups={internet:business.segment==='mfg'?['P05','P02','P01','P04']:business.segment==='micro'?['P01','P04']:['P02','P01','P04'],mobile:['P07'],email:['P16'],backup:['P09','P17'],security:['P20'],pos:['P19'],whatsapp:['P15'],cctv:['P23'],iot:['P24']};
   const primaryInternetIds=new Set(['P01','P02','P03','P04','P05','P06']);
   const requested=needsList.filter(n=>business.needs.includes(n));
-  const quantity=p=>p.unit==='per site'?business.sites:p.unit==='per line'&&p.id==='P07'&&Number.isInteger(requestedQuantities.mobileLines)&&requestedQuantities.mobileLines>0?requestedQuantities.mobileLines:p.unit==='per user'&&p.id==='P16'&&Number.isInteger(requestedQuantities.emailAccounts)&&requestedQuantities.emailAccounts>0?requestedQuantities.emailAccounts:['per user','per device'].includes(p.unit)?business.employees:p.unit==='per line'?Math.min(business.employees,2):1;
+  if(requested.includes('cctv')&&(!Number.isInteger(requestedQuantities.cameraCount)||requestedQuantities.cameraCount<1)){
+    return {profile:business,quote:null,alternatives:[],warnings:['How many CCTV cameras do you need? Enter a camera count before preparing a complete package quote.'],eligibleProducts:available,coverage:{requested,covered:[]}};
+  }
+  const quantity=p=>p.unit==='per site'?business.sites:p.unit==='per camera'&&Number.isInteger(requestedQuantities.cameraCount)&&requestedQuantities.cameraCount>0?requestedQuantities.cameraCount:p.unit==='per line'&&p.id==='P07'&&Number.isInteger(requestedQuantities.mobileLines)&&requestedQuantities.mobileLines>0?requestedQuantities.mobileLines:p.unit==='per user'&&p.id==='P16'&&Number.isInteger(requestedQuantities.emailAccounts)&&requestedQuantities.emailAccounts>0?requestedQuantities.emailAccounts:['per user','per device'].includes(p.unit)?business.employees:p.unit==='per line'?Math.min(business.employees,2):1;
   const candidates=new Map();
   function search(index,items,covered,rank,spent){
     if(index===requested.length){

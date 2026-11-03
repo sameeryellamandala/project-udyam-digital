@@ -54,6 +54,7 @@ const fieldIssues={
 };
 Object.assign(hindi,{
  'Fixed demo monthly quote':'डेमो की तय मासिक कीमत','Catalogue range':'कैटलॉग सीमा',
+ 'I’ve kept your requested services:':'आपकी चुनी सेवाएँ:','Business details:':'बिज़नेस विवरण:','Complete catalogue bundle:':'पूरा कैटलॉग पैकेज:','Monthly recurring total:':'मासिक आवर्ती कुल:','Total one-time setup:':'कुल एकमुश्त सेटअप:','Taxes are excluded because the catalogue does not provide tax rules.':'कैटलॉग में कर नियम नहीं हैं, इसलिए कर शामिल नहीं हैं।','Installation is an estimate of about':'इंस्टॉलेशन का अनुमानित समय लगभग','days after availability confirmation.':'दिन है; उपलब्धता की पुष्टि आवश्यक है।','The included catalogue services do not require active GST registration.':'इस पैकेज की सेवाओं के लिए सक्रिय GST पंजीकरण आवश्यक नहीं है।','Would you like to continue to the quotation? Select Review package below; this does not place an order.':'क्या आप कोटेशन देखना चाहते हैं? नीचे Review package चुनें; इससे ऑर्डर नहीं होगा।','Catalogue requirement:':'कैटलॉग की शर्त:','must be bundled with a primary connection.':'के साथ मुख्य कनेक्शन होना चाहिए।','in this bundle satisfies that rule.':'इस पैकेज में यह शर्त पूरी करता है।','The full catalogue price range is within your monthly budget; the provider must confirm the final price.':'कैटलॉग की पूरी कीमत सीमा आपके मासिक बजट में है; अंतिम कीमत प्रदाता से पुष्टि करें।',
  'Fixed demo quote uses each supplied catalogue minimum. The catalogue range is shown for reference. A real provider must confirm price and availability.':'डेमो की तय कीमत में हर सेवा की कैटलॉग न्यूनतम कीमत ली गई है। कैटलॉग सीमा संदर्भ के लिए है। वास्तविक कीमत और उपलब्धता की पुष्टि प्रदाता करेगा।',
  'Fixed demo quote uses catalogue minimums. Setup is one-time; taxes are excluded.':'डेमो की तय कीमत कैटलॉग न्यूनतम पर है। सेटअप शुल्क एक बार है; कर अलग हैं।',
  'Historic order: catalogue minimum displayed as the demo monthly amount.':'पुराने ऑर्डर में कैटलॉग न्यूनतम को डेमो मासिक कीमत के रूप में दिखाया गया है।',
@@ -84,6 +85,13 @@ Object.assign(hindi,{
  'version':'संस्करण','days':'दिन','Address could not be extracted.':'पता पढ़ा नहीं जा सका।','Upload a clear address proof.':'पते का स्पष्ट प्रमाण दें।','Installation address is needed for address matching.':'पते का मिलान करने के लिए इंस्टॉलेशन पता आवश्यक है।','Enter the installation address.':'इंस्टॉलेशन पता भरें।','Signatory expiry date is unreadable.':'पहचानपत्र की समाप्ति तारीख पढ़ी नहीं जा सकी।','GST and Udyam business names differ.':'GST और उद्यम के बिज़नेस नाम अलग हैं।','Use certificates for the same business or correct your details.':'उसी बिज़नेस के प्रमाणपत्र दें या विवरण सुधारें।','Local reading was not requested. Simulated assisted review is needed.':'स्थानीय पढ़ना नहीं चुना गया। डेमो सहायता समीक्षा आवश्यक है।','Choose a help topic and enter at least 5 characters.':'मदद का विषय चुनें और कम से कम 5 अक्षर लिखें।'
 });
 Object.assign(hindi,{
+ 'Our AI advisor is receiving many requests. Please try again shortly.':'हमारे AI सलाहकार को अभी बहुत अनुरोध मिल रहे हैं। कृपया थोड़ी देर बाद कोशिश करें।',
+ 'We couldn’t process that response. Please try again.':'हम इस जवाब को समझ नहीं पाए। कृपया फिर से कोशिश करें।',
+ 'Connection problem. Please check your internet connection.':'कनेक्शन में समस्या है। कृपया इंटरनेट जाँचें।',
+ 'The advisor took too long to respond. Please try again.':'सलाहकार को जवाब देने में ज़्यादा समय लगा। कृपया फिर से कोशिश करें।',
+ 'The advisor is temporarily unavailable. Please try again.':'सलाहकार अभी उपलब्ध नहीं है। कृपया फिर से कोशिश करें।'
+});
+Object.assign(hindi,{
  'Guided mode:':'गाइडेड मोड:','Requested services:':'चुनी सेवाएँ:','Employees:':'कर्मचारी:',
  'What type of business do you run?':'आप किस प्रकार का बिज़नेस चलाते हैं?','How many employees work in your business?':'आपके बिज़नेस में कितने कर्मचारी हैं?','How many business locations do you have?':'आपके बिज़नेस के कितने स्थान हैं?','Is the location Tier 1 or Tier 2?':'स्थान Tier 1 है या Tier 2?','What is your monthly budget?':'आपका मासिक बजट कितना है?','Which services do you need?':'आपको कौन सी सेवाएँ चाहिए?',
  'Installation is an estimate. Review the package below.':'इंस्टॉलेशन केवल अनुमान है। नीचे पैकेज देखें।','Monthly catalogue range:':'मासिक कैटलॉग सीमा:',
@@ -95,6 +103,9 @@ export function translateMessage(value,language){
  const match=/^(gst|udyam|address|signatory): (.+)$/.exec(trimmed);if(match&&fieldIssues[match[2]])return docLabels[match[1]]+': '+fieldIssues[match[2]];
  let result=String(value);
  for(const [english,translation] of Object.entries(hindi).sort((a,b)=>b[0].length-a[0].length))if(english.length>=12&&result.includes(english))result=result.replaceAll(english,translation);
+ result=result.replace(/The catalogue minimum is within your budget; the upper estimate is ₹([\d,]+) over it\. The final provider price must be confirmed\. I have not removed any requested service\./g,'कैटलॉग की न्यूनतम कीमत आपके बजट में है, लेकिन ऊपरी अनुमान ₹$1 अधिक है। अंतिम कीमत प्रदाता से पुष्टि करें। कोई माँगी गई सेवा नहीं हटाई गई।')
+  .replace(/The lowest monthly catalogue total is ₹([\d,]+) over your budget\. I have not removed any requested service\./g,'मासिक कैटलॉग की न्यूनतम कुल कीमत आपके बजट से ₹$1 अधिक है। कोई माँगी गई सेवा नहीं हटाई गई।')
+  .replace(/No complete eligible catalogue bundle for all these services fits your ₹([\d,]+) monthly budget\. The lowest complete option is ₹([\d,]+) over budget\. I have not removed any requested service; tell me if you want to change a requirement or budget\./g,'इन सभी सेवाओं वाला कोई पूरा पात्र पैकेज आपके ₹$1 मासिक बजट में नहीं है। सबसे कम कीमत वाला पूरा पैकेज ₹$2 अधिक है। कोई सेवा नहीं हटाई गई; बताएं कि आप बजट या ज़रूरत बदलना चाहते हैं।');
  result=result.replace(/\b(Reader|Storage|Uploaded|Extraction|Method|Selected|Next step|version)\b(:)?/g,(word,key,colon)=>hindi[word]||hindi[key+':']||hindi[key]||word);
  result=result.replace(/\b(local|temporary|encrypted_local|pdf_text|local_ocr|extracted|partially_extracted|not_extracted|none|days)\b/g,word=>hindi[word]||word);
  result=result.replace(/(gst|udyam|address|signatory): extracted fields match the submitted details\./g,(_,kind)=>docLabels[kind]+': पढ़े गए विवरण दी गई जानकारी से मिले।');
