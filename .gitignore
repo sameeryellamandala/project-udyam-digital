@@ -1,0 +1,12 @@
+.env
+.env.*
+!.env.example
+var/
+node_modules/
+*.log
+coverage/
+tmp/
+output/
+__MACOSX/
+*.zip
+reports/live-ai-check*.json

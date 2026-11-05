@@ -2,6 +2,7 @@ import {translateMessage} from '../public/locale.js';
 import {socialReply} from './advisor-social.mjs';
 import {advisor,redact} from './ai.mjs';
 import {blankProfile,freshMemory,mergeRequirements,publicRequirements,ambiguous} from './conversation-memory.mjs';
+import {missingLocationQuestion} from './locations.mjs';
 import {recommend} from './catalogue.mjs';
 import {validatedPackages,formatValidatedBundle} from './advisor-flow.mjs';
 const orderStatusLabels={ready_for_scheduling:'ready for scheduling',installation_scheduled:'installation scheduled',installed:'installation complete',activated:'activated',review_required:'waiting for document review',quote_accepted:'quote accepted'};
@@ -48,6 +49,8 @@ export async function conversationAdvisor(config,state,messages,data,language='e
  const hi=language==='hi';
  let missing=[['segment','What type of business do you run?'],['employees','How many employees work in your business?'],['sites','How many business locations do you have?'],['cityTier','Is the location Tier 1 or Tier 2?'],['budget','What is your monthly budget?'],['needs','Which services do you need?']].find(([k])=>!merged.details.knownFields.includes(k));
  if(!missing&&merged.profile.needs.includes('cctv')&&(!merged.details.knownFields.includes('cameraCount')||merged.details.cameraCount<1))missing=['cameraCount',hi?'आपको कुल कितने CCTV कैमरे चाहिए? हर स्थान की संख्या भी बता सकते हैं।':'How many CCTV cameras do you need in total? You can also give a count for each location.'];
+ const locationQuestion=missingLocationQuestion(merged.profile);
+ if(locationQuestion&&(!missing||['cityTier','cameraCount'].includes(missing[0])))missing=['locations',locationQuestion];
  const serviceHi={internet:'इंटरनेट',email:'ईमेल',mobile:'बिज़नेस SIM',backup:'बैकअप',security:'सुरक्षा',pos:'बिलिंग',cctv:'CCTV',whatsapp:'WhatsApp',iot:'मशीन IoT'};
  let reply='';
  if(missing){

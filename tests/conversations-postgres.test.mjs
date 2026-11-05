@@ -75,6 +75,20 @@ test('PostgreSQL sessions: migrations, memory, history, ownership, HTTP, retries
   const verifyResponse=await req('/verify','POST',{sessionId:sameFormJourney.id,revision:sameFormJourney.revision,profile:form,consent:true,consentVersion:'2026-10-smart-kyc-v3',contact:person,documents:[],extractionMethod:'manual'});assert.equal(verifyResponse.status,200);const verification=await verifyResponse.json();
   const sameAgain=await (await req('/sessions','POST',{profile:form,requestId:randomUUID()})).json();
   const crossOrder=await req('/orders','POST',{sessionId:sameAgain.id,revision:sameAgain.revision,profile:form,consent:true,contact:person,verificationId:verification.id,items:sameAgain.recommendation.quote.items.map(x=>({productId:x.productId,quantity:x.quantity})),requestKey:randomUUID()});assert.equal(crossOrder.status,409);
+  // Mixed city tiers and camera splits persist in the same PostgreSQL journey.
+  const branches={...form,needs:['internet','cctv'],cameraCount:3,locations:[
+    {id:'north',name:'North branch',city:'Demo North',cityTier:1,cameraCount:2},
+    {id:'south',name:'South branch',city:'Demo South',cityTier:2,cameraCount:1}]};
+  const branchCreation=await req('/sessions','POST',{profile:branches,requestId:randomUUID()});assert.equal(branchCreation.status,201);
+  const branchJourney=await branchCreation.json();
+  const branchReload=await (await req('/sessions/'+branchJourney.id+'/recommendation')).json();
+  assert.deepEqual(branchReload.requirements.locations.map(location=>location.city_tier),[1,2]);
+  assert.deepEqual(branchReload.requirements.locations.map(location=>location.camera_count),[2,1]);
+  const branchItems=branchReload.recommendation.quote.items.map(({productId,quantity,locationId})=>({productId,quantity,...(locationId?{locationId}:{})}));
+  assert.equal((await req('/quote','POST',{sessionId:branchJourney.id,revision:branchReload.revision,items:branchItems})).status,200);
+  const branchSaved=await (await req('/sessions/'+branchJourney.id+'/recommendation')).json();
+  assert.ok(branchSaved.requirements.selected_products.every(item=>item.locationId));
+  assert.equal((await req('/sessions/'+branchJourney.id,'GET',undefined,otherCookie)).status,404);
   assert.equal((await req('/sessions/'+chat.id,'DELETE')).status,200);assert.equal((await req('/sessions/'+chat.id)).status,404);
   await store.remove(owner,first.id);assert.equal(Number((await store.pool.query('SELECT count(*) FROM advisor_messages WHERE session_id=$1',[first.id])).rows[0].count),0);
   await store.pool.query("UPDATE advisor_owners SET expires_at=now()-interval '1 second' WHERE id=$1",[owner]);assert.deepEqual(await store.list(owner),[]);await assert.rejects(store.get(owner,second.id),e=>e.status===404);

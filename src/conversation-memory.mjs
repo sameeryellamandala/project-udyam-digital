@@ -1,4 +1,5 @@
 import {profile,AppError} from './catalogue.mjs';
+import {mergeBranchDetails} from './locations.mjs';
 export const blankProfile=language=>profile({businessName:'New business',segment:'prof',employees:1,sites:1,cityTier:1,budget:1,needs:['internet'],language});
 export const freshMemory=()=>({memoryVersion:1,details:{knownFields:[],needs:[],mobileLines:0,emailAccounts:0,cameraCount:0,gstStatus:'unknown',internetPreference:'any'},items:[],offers:[]});
 export const ambiguous=text=>/^(?:increase|decrease|reduce|change|remove|add)(?: it| that| this)?[.!?]*$/i.test(text.trim());
@@ -86,15 +87,24 @@ export function mergeRequirements(business,extracted,previous,text,pending=''){
  const segment=[['prof',/क्लिनिक|कार्यालय|ऑफ़िस/],['micro',/किराना|दुकान|सैलून|\bkirana\b/],['multi',/बहु.?स्थान/],['mfg',/कारखाना|फैक्टरी/]].find(([,re])=>re.test(normalized));if(segment){details.segment=segment[0];provided.add('segment');}
  const forgetBudget=/(?:clear|remove|unset)\s+(?:my\s+|the\s+)?(?:monthly\s+)?budget|(?:no|unknown)\s+(?:monthly\s+)?budget|budget\s*(?:is\s+)?(?:unknown|not decided)/.test(normalized);
  if(forgetBudget){known.delete('budget');provided.delete('budget');details.budget=1;}
+ const branches=mergeBranchDetails(business,previous,{...details,locations:extracted.locations||details.locations},normalized,provided,pending);
+ if(branches){
+  details.locations=branches;details.sites=branches.length;provided.add('sites');known.add('locations');
+  if(branches.every(location=>location.cityTier!==null)){details.cityTier=branches[0].cityTier;provided.add('cityTier');}
+  else{known.delete('cityTier');provided.delete('cityTier');}
+  if(details.needs.includes('cctv')&&branches.every(location=>location.cameraCount!==null)){
+   details.cameraCount=branches.reduce((sum,location)=>sum+location.cameraCount,0);known.add('cameraCount');
+  }
+ }
  for(const k of provided)known.add(k);
  details.knownFields=[...known];
  const values=Object.fromEntries(['segment','employees','sites','cityTier','budget','needs'].filter(k=>provided.has(k)).map(k=>[k,details[k]]));
  // Internal placeholders keep the existing rule engine compatible; public unknowns stay null.
  if(!details.needs.length){values.needs=['internet'];details.knownFields=details.knownFields.filter(k=>k!=='needs');}
- const next=profile({...business,...values,...(forgetBudget?{budget:1}:{}),currentTools:details.currentTools});
+ const next=profile({...business,...values,...(branches?{locations:branches,cameraCount:details.cameraCount>0?details.cameraCount:null}:{}),...(forgetBudget?{budget:1}:{}),currentTools:details.currentTools});
  return {profile:next,details};
 }
 export function publicRequirements(state={}){
  const d=state.details||{},p=state.profile||{},known=new Set(d.knownFields||[]),value=k=>known.has(k)?p[k]??d[k]??null:null;
- return {business_name:state.form?.businessName||null,current_tools:value('currentTools'),business_type:value('segment'),business_location:value('city'),city_tier:value('cityTier'),employee_count:value('employees'),site_count:value('sites'),locations:known.has('locations')?(d.locations||[]).map(location=>({name:location.name,camera_count:location.cameraCount})):null,internet_required:known.has('needs')?(d.needs||p.needs||[]).includes('internet'):null,mobile_sim_count:known.has('mobileLines')?d.mobileLines:null,mobile_plan_type:d.mobilePlanType||null,camera_count:known.has('cameraCount')?d.cameraCount:null,gstin_status:d.gstStatus||'unknown',budget:value('budget'),requested_services:known.has('needs')?d.needs||p.needs||[]:[],selected_products:state.selectedProducts||[],optional_recommendations:[]};
+ return {business_name:state.form?.businessName||null,current_tools:value('currentTools'),business_type:value('segment'),business_location:value('city'),city_tier:value('cityTier'),employee_count:value('employees'),site_count:value('sites'),locations:p.locations?p.locations.map(location=>({id:location.id,name:location.name,city:location.city,city_tier:location.cityTier,camera_count:location.cameraCount})):known.has('locations')?(d.locations||[]).map(location=>({name:location.name,camera_count:location.cameraCount})):null,internet_required:known.has('needs')?(d.needs||p.needs||[]).includes('internet'):null,mobile_sim_count:known.has('mobileLines')?d.mobileLines:null,mobile_plan_type:d.mobilePlanType||null,camera_count:known.has('cameraCount')?d.cameraCount:null,gstin_status:d.gstStatus||'unknown',budget:value('budget'),requested_services:known.has('needs')?d.needs||p.needs||[]:[],selected_products:state.selectedProducts||[],optional_recommendations:[]};
 }

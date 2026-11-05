@@ -22,17 +22,18 @@ export function createAdvisorTools(business,data){
         return {product,score};
       }).filter(result=>result.score>0).sort((a,b)=>b.score-a.score||a.product.id.localeCompare(b.product.id)).map(result=>publicProduct(result.product));
     },
-    check_product_eligibility:(id,checkedBusiness=business)=>{
+    check_product_eligibility:(id,checkedBusiness=business,locationId)=>{
       const product=getProduct(id);if(!product)return {productId:id,eligible:false,reasons:['product_not_in_catalogue']};
-      const reasons=eligibility(product,checkedBusiness,data);
+      const reasons=eligibility(product,checkedBusiness,data,locationId);
       return {productId:id,eligible:reasons.length===0,reasons};
     },
     check_product_dependencies:productIds=>{
-      const selected=new Set(Array.isArray(productIds)?productIds:[]);
-      return [...selected].flatMap(id=>{
+      const selected=(Array.isArray(productIds)?productIds:[]).map(item=>typeof item==='string'?{productId:item}:item);
+      return selected.flatMap(item=>{
+        const id=item.productId;
         const product=getProduct(id);if(!product)return [{productId:id,satisfied:false,reason:'product_not_in_catalogue'}];
         const required=[...product.requiresOneOf];
-        return required.length&&!required.some(requiredId=>selected.has(requiredId))
+        return required.length&&!selected.some(candidate=>required.includes(candidate.productId)&&(!item.locationId||candidate.locationId===item.locationId))
           ?[{productId:id,satisfied:false,requiresOneOf:required}]:[];
       });
     },

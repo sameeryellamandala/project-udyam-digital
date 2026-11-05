@@ -64,10 +64,11 @@ function parsedOutput(text,schema,name=''){
  // Unknown discovery fields are placeholders, never eligibility facts. Normalize
  // nullable placeholders without accepting invalid customer-confirmed facts.
  if(name==='advisor_requirements'&&result&&typeof result==='object'){
+  if(schema.properties.locations&&!Object.hasOwn(result,'locations'))result.locations=[];
   const validFields=schema.properties.knownFields.items.enum;
   if(Array.isArray(result.knownFields))result.knownFields=[...new Set(result.knownFields.filter(k=>validFields.includes(k)))];
   const known=result.knownFields||[];
-  const defaults={segment:'prof',employees:1,sites:1,cityTier:1,budget:1,needs:['internet'],currentTools:'',city:'',gstStatus:'unknown',mobileLines:0,emailAccounts:0,internetPreference:'any',selectedProductIds:[]};
+  const defaults={segment:'prof',employees:1,sites:1,cityTier:1,budget:1,needs:['internet'],currentTools:'',city:'',gstStatus:'unknown',mobileLines:0,emailAccounts:0,internetPreference:'any',selectedProductIds:[],locations:[]};
   for(const [k,v] of Object.entries(defaults))if(result[k]===null&&!known.includes(k))result[k]=v;
  }
  if(!conforms(result,schema)){const error=new AppError('AI returned an invalid structured response.',503,'AI_INVALID_REPLY');error.validationIssues=validationIssues(result,schema);throw error;}return result;

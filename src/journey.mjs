@@ -5,9 +5,12 @@ import {redact} from './ai.mjs';
 const confirmedFields=['segment','employees','sites','cityTier','budget','needs'];
 export function formRequirements(input,previous={}){
  const p=profile({...input,gstin:'',udyam:''});p.businessName=redact(p.businessName);p.currentTools=redact(p.currentTools);
+ if(p.locations?.some(location=>location.cityTier===null))throw new AppError('Choose a city tier for every location.',400,'INCOMPLETE_LOCATIONS');
+ if(p.locations)p.locations=p.locations.map(location=>({...location,name:redact(location.name),city:redact(location.city)}));
  const details={...freshMemory().details,...previous.details,knownFields:[...new Set([...(previous.details?.knownFields||[]),...confirmedFields,'currentTools'])],...Object.fromEntries(confirmedFields.map(k=>[k,p[k]])),currentTools:p.currentTools,selectedProductIds:[],action:'recommend',selectionMode:'merge'};
  if(p.needs.includes('cctv')&&Number.isInteger(p.cameraCount)){details.cameraCount=p.cameraCount;details.knownFields=[...new Set([...details.knownFields,'cameraCount'])];}
  if(!p.needs.includes('cctv')){details.cameraCount=0;details.locations=[];details.knownFields=details.knownFields.filter(k=>!['cameraCount','locations'].includes(k));}
+ if(p.locations){details.locations=p.locations;details.knownFields=[...new Set([...details.knownFields,'locations'])];}
  if(!p.needs.includes('mobile')){details.mobileLines=0;details.mobilePlanType=null;}
  if(!p.needs.includes('email'))details.emailAccounts=0;
  const savedProfile={...p};delete savedProfile.businessName;

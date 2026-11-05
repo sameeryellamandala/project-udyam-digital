@@ -1,5 +1,14 @@
 import {gstFormat} from './catalogue.mjs';
 export const normalizeRegistration=value=>typeof value==='string'?value.trim().toUpperCase():'';
+export function checkGstinStructure(id){
+ if(!id||typeof id!=='string')return false;
+ const clean=normalizeRegistration(id).replace(/\s/g,'');
+ return /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/.test(clean);
+}
+export function checkGstinChecksum(id){
+ if(!checkGstinStructure(id))return false;
+ return gstFormat(normalizeRegistration(id).replace(/\s/g,''));
+}
 export function normalizeOcrGstin(value){
  const observed=normalizeRegistration(value).replace(/\s/g,'');
  if(gstFormat(observed))return {value:observed,adjusted:false};

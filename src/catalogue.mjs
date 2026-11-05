@@ -40,11 +40,34 @@ export function profile(raw = {}) {
   if (!['micro', 'prof', 'multi', 'mfg'].includes(raw.segment)) throw new AppError('Choose a business type.');
   if (!Array.isArray(raw.needs) || !raw.needs.length || raw.needs.some(n => !needsList.includes(n))) throw new AppError('Choose at least one supported service.');
   const businessName = text(raw.businessName, 120); if (!businessName) throw new AppError('Business name is required.');
-  const cameraCount=raw.cameraCount===undefined||raw.cameraCount===null||raw.cameraCount===''?null:integer(raw.cameraCount,1,10000,'Camera count');
-  return { businessName, segment: raw.segment, employees: integer(raw.employees, 1, 10000, 'Team size'), sites: integer(raw.sites, 1, 1000, 'Locations'),
+  const sites=integer(raw.sites,1,1000,'Locations');
+  let cameraCount=raw.cameraCount===undefined||raw.cameraCount===null||raw.cameraCount===''?null:integer(raw.cameraCount,1,10000,'Camera count');
+  let locations;
+  if(raw.locations!==undefined&&raw.locations!==null){
+    if(!Array.isArray(raw.locations))throw new AppError('Location details must be a list.');
+    if(raw.locations.length){
+      if(raw.locations.length!==sites)throw new AppError('Provide details for every business location.');
+      const ids=new Set();
+      locations=raw.locations.map((location,index)=>{
+        if(!location||typeof location!=='object')throw new AppError('Invalid business location.');
+        const id=location.id||'branch-'+(index+1);
+        if(typeof id!=='string'||!/^[-a-zA-Z0-9_]{1,40}$/.test(id)||ids.has(id))throw new AppError('Each location needs a unique valid ID.');
+        ids.add(id);
+        return {id,name:text(location.name||'Branch '+(index+1),100),city:text(location.city||'',100),
+          cityTier:location.cityTier===null||location.cityTier===undefined||location.cityTier===''?null:integer(location.cityTier,1,2,'Location city tier'),
+          cameraCount:location.cameraCount===null||location.cameraCount===undefined||location.cameraCount===''?null:integer(location.cameraCount,0,10000,'Location camera count')};
+      });
+      if(locations.every(location=>location.cameraCount!==null)){
+        const total=locations.reduce((sum,location)=>sum+location.cameraCount,0);
+        if(total>10000)throw new AppError('Total camera count must be at most 10000.');
+        if(raw.needs.includes('cctv')&&total>0)cameraCount=total;
+      }
+    }
+  }
+  return { businessName, segment: raw.segment, employees: integer(raw.employees, 1, 10000, 'Team size'), sites,
     cityTier: integer(raw.cityTier, 1, 2, 'City tier'), budget: integer(raw.budget, 1, 10000000, 'Budget'), needs: [...new Set(raw.needs)].sort(),
     cameraCount,currentTools: text(raw.currentTools || '', 500), language: raw.language === 'hi' ? 'hi' : 'en',
-    gstin: text(raw.gstin || '', 15).toUpperCase(), udyam: text(raw.udyam || '', 19).toUpperCase() };
+    gstin: text(raw.gstin || '', 15).toUpperCase(), udyam: text(raw.udyam || '', 19).toUpperCase(),...(locations?{locations}:{}) };
 }
 
 export function gstFormat(id) {
@@ -54,9 +77,13 @@ export function gstFormat(id) {
   return chars[(36 - sum % 36) % 36] === id[14];
 }
 
-export function eligibility(p, business, data) {
+export function eligibility(p, business, data, locationId) {
   const reasons = [];
-  if (!p.tiers.includes(business.cityTier)) reasons.push('unavailable in this city tier');
+  const locations=locationId?business.locations?.filter(location=>location.id===locationId):business.locations;
+  if(locationId&&!locations?.length)reasons.push('unknown business location');
+  if(locations?.length){
+    for(const location of locations)if(!p.tiers.includes(location.cityTier))reasons.push(location.cityTier===null?`city tier is missing for ${location.name}`:`unavailable in Tier ${location.cityTier} at ${location.name}`);
+  }else if(!p.tiers.includes(business.cityTier))reasons.push('unavailable in this city tier');
   if (business.employees < p.minEmployees) reasons.push(`needs at least ${p.minEmployees} employees`);
   if (business.sites < p.minSites) reasons.push(`needs at least ${p.minSites} locations`);
   if (p.requiresGst && (!gstFormat(business.gstin) || data.gst.get(business.gstin)?.status !== 'Active')) reasons.push('needs a valid active GSTIN');
@@ -64,28 +91,48 @@ export function eligibility(p, business, data) {
 }
 
 export function quote(business, items, data) {
-  if (!Array.isArray(items) || !items.length || items.length > 25) throw new AppError('Choose between 1 and 25 products.');
+  if (!Array.isArray(items) || !items.length || items.length > 25*Math.max(1,business.locations?.length||0)) throw new AppError('Choose between 1 and 25 products per location.');
+  if(business.locations?.some(location=>location.cityTier===null))throw new AppError('Choose a city tier for every location.',409,'INCOMPLETE_LOCATIONS');
+  if(business.locations?.length){
+    items=items.flatMap(item=>{
+      const product=data.products.find(product=>product.id===item?.productId);
+      if(item?.locationId||!product)return [item];
+      if(product.unit==='per site'){
+        if(item.quantity!==business.sites)throw new AppError(`${product.name}: select the location or choose one unit per location.`);
+        return business.locations.map(location=>({...item,quantity:1,locationId:location.id}));
+      }
+      if(product.unit==='per camera'){
+        if(business.locations.some(location=>location.cameraCount===null)||business.locations.reduce((sum,location)=>sum+location.cameraCount,0)!==item.quantity)throw new AppError('Specify camera quantities for each location before pricing CCTV.',409,'INCOMPLETE_LOCATIONS');
+        return business.locations.filter(location=>location.cameraCount>0).map(location=>({...item,quantity:location.cameraCount,locationId:location.id}));
+      }
+      if(product.requiresOneOf.length)throw new AppError(`Choose a location for ${product.name}.`,400,'LOCATION_REQUIRED');
+      return [item];
+    });
+  }
   const ids = new Set();
   const lines = items.map(item => {
     if (!item || typeof item !== 'object') throw new AppError('Invalid quote item.');
     const p = data.products.find(p => p.id === item.productId);
     if (!p) throw new AppError('Unknown product.');
-    if (ids.has(p.id)) throw new AppError(`Duplicate product: ${p.name}.`); ids.add(p.id);
+    const location=item.locationId?business.locations?.find(location=>location.id===item.locationId):null;
+    if(item.locationId&&!location)throw new AppError('Choose a valid business location.',400,'INVALID_LOCATION');
+    const key=p.id+':'+(location?.id||'shared');
+    if (ids.has(key)) throw new AppError(`Duplicate product: ${p.name}.`); ids.add(key);
     const quantity = integer(item.quantity, 1, 10000, 'Quantity');
-    if (p.unit === 'per site' && quantity !== business.sites) throw new AppError(`${p.name}: choose one unit per location (${business.sites}).`);
-    const reasons = eligibility(p, business, data);
+    if (p.unit === 'per site' && quantity !== (location?1:business.sites)) throw new AppError(`${p.name}: choose one unit per location (${location?1:business.sites}).`);
+    const reasons = eligibility(p, business, data,location?.id);
     if (reasons.length) throw new AppError(`${p.name}: ${reasons.join('; ')}.`, 400, 'INELIGIBLE_PRODUCT');
-    return { productId: p.id, name: p.name, description: p.description, reason:productReason(p,business,quantity), unit: p.unit, quantity, unitPrice: p.price, unitPriceMax:p.maxPrice, monthly: p.price * quantity, monthlyMax:p.maxPrice*quantity, setup: p.setup * quantity, contractMonths: p.contractMonths, installDays: p.installDays };
+    return { productId: p.id,...(location?{locationId:location.id,locationName:location.name,cityTier:location.cityTier}:{}), name: p.name, description: p.description, reason:productReason(p,business,quantity), unit: p.unit, quantity, unitPrice: p.price, unitPriceMax:p.maxPrice, monthly: p.price * quantity, monthlyMax:p.maxPrice*quantity, setup: p.setup * quantity, contractMonths: p.contractMonths, installDays: p.installDays };
   });
-  for (const line of lines) { const p = data.products.find(p => p.id === line.productId); if (p.requiresOneOf.length && !p.requiresOneOf.some(id => ids.has(id))) throw new AppError(`${p.name} needs one of: ${p.requiresOneOf.join(', ')}.`, 400, 'MISSING_DEPENDENCY'); }
+  for (const line of lines) { const p = data.products.find(p => p.id === line.productId); if (p.requiresOneOf.length && !lines.some(candidate=>p.requiresOneOf.includes(candidate.productId)&&(!business.locations?.length||candidate.locationId===line.locationId))) throw new AppError(`${p.name}${line.locationName?' at '+line.locationName:''} needs one of: ${p.requiresOneOf.join(', ')} at the same location.`, 400, 'MISSING_DEPENDENCY'); }
   const serviceProducts={internet:['P01','P02','P03','P04','P05','P06'],mobile:['P07','P08'],email:['P16'],backup:['P09','P17'],security:['P20','P21'],pos:['P19'],whatsapp:['P15'],cctv:['P23'],iot:['P24']};
   const requestedIds=new Set(business.needs.flatMap(need=>serviceProducts[need]||[]));
   const supportingIds=new Set();
   for(const line of lines.filter(line=>requestedIds.has(line.productId))){
     const product=data.products.find(product=>product.id===line.productId);
-    for(const id of product.requiresOneOf)if(ids.has(id))supportingIds.add(id);
+    for(const id of product.requiresOneOf)if(lines.some(candidate=>candidate.productId===id&&candidate.locationId===line.locationId))supportingIds.add(id+':'+(line.locationId||'shared'));
   }
-  for(const line of lines)line.selectionType=requestedIds.has(line.productId)?'requested':supportingIds.has(line.productId)?'supporting':'addon';
+  for(const line of lines)line.selectionType=requestedIds.has(line.productId)?'requested':supportingIds.has(line.productId+':'+(line.locationId||'shared'))?'supporting':'addon';
   const breakdown=Object.fromEntries(['requested','supporting','addon'].map(type=>{
     const selected=lines.filter(line=>line.selectionType===type);
     return [type,{monthly:selected.reduce((sum,line)=>sum+line.monthly,0),setup:selected.reduce((sum,line)=>sum+line.setup,0)}];
@@ -94,10 +141,19 @@ export function quote(business, items, data) {
   const warnings=[];
   if(monthly>business.budget)warnings.push('The minimum catalogue total exceeds your monthly budget. Remove items or increase your budget before ordering.');
   else if(monthlyMax>business.budget)warnings.push('The catalogue price range may exceed your monthly budget. Confirm the final price before accepting.');
-  return { items: lines, breakdown, monthly, monthlyMax, checkoutMonthly:monthly, pricingPolicy:'catalogue_minimum_demo_v1',
+  const locationTotals=business.locations?.map(location=>{
+    const selected=lines.filter(line=>line.locationId===location.id);
+    return {...location,monthly:selected.reduce((sum,line)=>sum+line.monthly,0),monthlyMax:selected.reduce((sum,line)=>sum+line.monthlyMax,0),setup:selected.reduce((sum,line)=>sum+line.setup,0)};
+  });
+  const sharedMonthly=lines.filter(line=>!line.locationId).reduce((sum,line)=>sum+line.monthly,0);
+  return { items: lines, breakdown,...(locationTotals?{locationTotals,sharedMonthly}:{}), monthly, monthlyMax, checkoutMonthly:monthly, pricingPolicy:'catalogue_minimum_demo_v1',
     pricingNote:'Fixed demo quote uses each supplied catalogue minimum. The catalogue range is shown for reference. A real provider must confirm price and availability.',
     setup: lines.reduce((s, x) => s + x.setup, 0), contractMonths: Math.max(...lines.map(x => x.contractMonths)), installDays: Math.max(...lines.map(x => x.installDays)),
     taxNote: 'Fixed demo quote uses catalogue minimums. Setup is one-time; taxes are excluded.', warnings };
+}
+
+export function quoteItems(items){
+  return items.map(item=>({productId:item.productId,quantity:item.quantity,...(item.locationId?{locationId:item.locationId}:{})}));
 }
 
 export function productReason(p,b,q) {
@@ -111,6 +167,7 @@ export function recommend(business, data) {
 }
 
 export function recommendForNeeds(business, data, requestedQuantities = {}) {
+  if(business.locations?.length)return recommendForLocations(business,data,requestedQuantities);
   const available=data.products.filter(p=>!eligibility(p,business,data).length), warnings=[];
   const groups={internet:business.segment==='mfg'?['P05','P02','P01','P04']:business.segment==='micro'?['P01','P04']:['P02','P01','P04'],mobile:['P07'],email:['P16'],backup:['P09','P17'],security:['P20'],pos:['P19'],whatsapp:['P15'],cctv:['P23'],iot:['P24']};
   const primaryInternetIds=new Set(['P01','P02','P03','P04','P05','P06']);
@@ -162,4 +219,51 @@ export function recommendForNeeds(business, data, requestedQuantities = {}) {
   }
   const makeQuote=candidate=>quote(business,candidate.items,data);
   return {profile:business,quote:makeQuote(best),alternatives:ordered.slice(1,8).map(makeQuote),warnings,eligibleProducts:available,coverage:{requested,covered:best.covered}};
+}
+
+function recommendForLocations(business,data,requestedQuantities){
+  const eligibleProducts=data.products.map(product=>({...product,availableLocationIds:business.locations.filter(location=>!eligibility(product,business,data,location.id).length).map(location=>location.id)})).filter(product=>product.availableLocationIds.length);
+  const empty=message=>({profile:business,quote:null,alternatives:[],warnings:[message],eligibleProducts,coverage:{requested:business.needs,covered:[]}});
+  const missingTier=business.locations.find(location=>location.cityTier===null);
+  if(missingTier)return empty(`Is ${missingTier.name} in Tier 1 or Tier 2?`);
+  if(business.needs.includes('cctv')){
+    const missingCameras=business.locations.find(location=>location.cameraCount===null);
+    if(missingCameras)return empty(`How many cameras do you need at ${missingCameras.name}? Enter 0 if none are needed there.`);
+    if(!business.locations.some(location=>location.cameraCount>0))return empty('Specify a positive camera quantity at at least one location.');
+  }
+  const rankCandidates=(a,b)=>{
+    const fit=entry=>entry.quote.monthlyMax<=business.budget?0:entry.quote.monthly<=business.budget?1:2;
+    return fit(a)-fit(b)||(fit(a)===2?a.quote.monthly-b.quote.monthly:0)||a.rank-b.rank||a.quote.monthly-b.quote.monthly;
+  };
+  let candidates=[{items:[],rank:0}];
+  for(const location of business.locations){
+    const localBusiness={...business,locations:undefined,sites:1,cityTier:location.cityTier,cameraCount:location.cameraCount,
+      needs:business.needs.filter(need=>need!=='cctv'||location.cameraCount>0)};
+    if(!localBusiness.needs.length)continue;
+    const local=recommendForNeeds(localBusiness,data,{...requestedQuantities,cameraCount:location.cameraCount});
+    if(!local.quote)return empty(`${location.name}: ${local.warnings.join(' ')}`);
+    const next=new Map();
+    for(const candidate of candidates){
+      for(const [rank,option]of [local.quote,...local.alternatives].entries()){
+        const combined=new Map(candidate.items.map(item=>[item.productId+':'+(item.locationId||'shared'),item]));
+        for(const line of option.items){
+          const product=data.products.find(product=>product.id===line.productId);
+          const scoped=product.unit==='per site'||product.unit==='per camera'||product.requiresOneOf.length>0;
+          const item={productId:line.productId,quantity:line.quantity,...(scoped?{locationId:location.id}:{})};
+          const key=item.productId+':'+(item.locationId||'shared'),prior=combined.get(key);
+          combined.set(key,prior?{...item,quantity:Math.max(prior.quantity,item.quantity)}:item);
+        }
+        const items=[...combined.values()],signature=JSON.stringify(items);
+        try{
+          const priced=quote(business,items,data),entry={items,quote:priced,rank:candidate.rank+rank};
+          if(!next.has(signature)||next.get(signature).rank>entry.rank)next.set(signature,entry);
+        }catch(error){if(!(error instanceof AppError))throw error;}
+      }
+    }
+    candidates=[...next.values()].sort(rankCandidates).slice(0,16);
+    if(!candidates.length)return empty(`No complete eligible package is available for ${location.name}. Review its requirements.`);
+  }
+  const ordered=candidates.filter(candidate=>candidate.quote).sort(rankCandidates);
+  if(!ordered.length)return empty('Select services for at least one location.');
+  return {profile:business,quote:ordered[0].quote,alternatives:ordered.slice(1,8).map(candidate=>candidate.quote),warnings:[],eligibleProducts,coverage:{requested:business.needs,covered:business.needs}};
 }

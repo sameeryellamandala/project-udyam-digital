@@ -15,10 +15,13 @@ export function createStore(path) {
     CREATE TABLE IF NOT EXISTS verifications(id TEXT PRIMARY KEY, session_hash TEXT NOT NULL REFERENCES sessions(id_hash) ON DELETE CASCADE, profile_hash TEXT NOT NULL, result_json TEXT NOT NULL, created_at TEXT NOT NULL);
     CREATE TABLE IF NOT EXISTS orders(id TEXT PRIMARY KEY, session_hash TEXT NOT NULL REFERENCES sessions(id_hash) ON DELETE CASCADE, request_key TEXT NOT NULL, profile_json TEXT NOT NULL, contact_json TEXT NOT NULL, quote_json TEXT NOT NULL, verification_json TEXT NOT NULL, status TEXT NOT NULL, created_at TEXT NOT NULL, UNIQUE(session_hash,request_key));
     CREATE TABLE IF NOT EXISTS support_requests(id TEXT PRIMARY KEY, session_hash TEXT NOT NULL REFERENCES sessions(id_hash) ON DELETE CASCADE, order_id TEXT NOT NULL REFERENCES orders(id) ON DELETE CASCADE, topic TEXT NOT NULL, message TEXT NOT NULL, status TEXT NOT NULL, created_at TEXT NOT NULL);
+    CREATE TABLE IF NOT EXISTS hidden_support_requests(request_id TEXT PRIMARY KEY REFERENCES support_requests(id) ON DELETE CASCADE,hidden_at TEXT NOT NULL);
+    CREATE TABLE IF NOT EXISTS fulfillment_history(event_id TEXT PRIMARY KEY,order_id TEXT NOT NULL REFERENCES orders(id) ON DELETE CASCADE,previous_status TEXT,new_status TEXT,actor TEXT,expected_date TEXT);
     CREATE TABLE IF NOT EXISTS order_events(id TEXT PRIMARY KEY, order_id TEXT NOT NULL REFERENCES orders(id) ON DELETE CASCADE, event_type TEXT NOT NULL, detail TEXT NOT NULL, occurred_at TEXT NOT NULL);
     CREATE TABLE IF NOT EXISTS lead_handoffs(lead_id TEXT PRIMARY KEY, priority_score INTEGER NOT NULL, reason TEXT NOT NULL, status TEXT NOT NULL, created_at TEXT NOT NULL);
     CREATE TABLE IF NOT EXISTS support_replies(id TEXT PRIMARY KEY,request_id TEXT NOT NULL REFERENCES support_requests(id) ON DELETE CASCADE,message TEXT NOT NULL,status TEXT NOT NULL,created_at TEXT NOT NULL);
-    CREATE TABLE IF NOT EXISTS order_kyc_updates(id TEXT PRIMARY KEY,order_id TEXT NOT NULL REFERENCES orders(id) ON DELETE CASCADE,verification_json TEXT NOT NULL,created_at TEXT NOT NULL);`);
+    CREATE TABLE IF NOT EXISTS order_kyc_updates(id TEXT PRIMARY KEY,order_id TEXT NOT NULL REFERENCES orders(id) ON DELETE CASCADE,verification_json TEXT NOT NULL,created_at TEXT NOT NULL);
+    CREATE TABLE IF NOT EXISTS customer_notification_reads(session_hash TEXT NOT NULL REFERENCES sessions(id_hash) ON DELETE CASCADE,notification_id TEXT NOT NULL,read_at TEXT NOT NULL,PRIMARY KEY(session_hash,notification_id));`);
   return {
     db,
     advisorConversation(session) { const row=db.prepare('SELECT state_json FROM advisor_conversations WHERE session_hash=?').get(session);return row?JSON.parse(row.state_json):{}; },
@@ -36,6 +39,8 @@ export function createStore(path) {
       db.prepare('INSERT INTO sessions VALUES(?,?,?) ON CONFLICT(id_hash) DO UPDATE SET expires_at=excluded.expires_at').run(owner,now.toISOString(),expiresAt);
       return {hash:owner,expiresAt};
     },
+    notificationReadIds(owner){return new Set(db.prepare('SELECT notification_id FROM customer_notification_reads WHERE session_hash=?').all(owner).map(row=>row.notification_id));},
+    markNotificationsRead(owner,ids){const now=new Date().toISOString(),insert=db.prepare('INSERT OR IGNORE INTO customer_notification_reads VALUES(?,?,?)');db.exec('BEGIN IMMEDIATE');try{for(const id of ids)insert.run(owner,id,now);db.exec('COMMIT');}catch(error){db.exec('ROLLBACK');throw error;}},
     claimGuest(from,to){
       if(from===to)return;
       db.exec('BEGIN IMMEDIATE');try{
@@ -70,7 +75,7 @@ export function createStore(path) {
       const supportRequests=db.prepare('SELECT id,topic,message,status,created_at AS createdAt FROM support_requests WHERE session_hash=? AND order_id=? ORDER BY created_at DESC').all(session,id);
       for(const r of supportRequests)r.replies=this.supportReplies(r.id);
       const update=db.prepare('SELECT verification_json,created_at FROM order_kyc_updates WHERE order_id=? ORDER BY rowid DESC LIMIT 1').get(id);
-      const events=db.prepare('SELECT event_type AS type,detail,occurred_at AS occurredAt FROM order_events WHERE order_id=? ORDER BY occurred_at').all(id);
+      const events=db.prepare('SELECT event_type AS type,detail,occurred_at AS occurredAt,h.expected_date AS expectedDate,h.previous_status AS previousStatus,h.new_status AS newStatus,h.actor FROM order_events e LEFT JOIN fulfillment_history h ON h.event_id=e.id WHERE e.order_id=? ORDER BY occurred_at,e.rowid').all(id);
       return { id: row.id, createdAt: row.created_at, status: row.status, profile: JSON.parse(row.profile_json), contact: JSON.parse(row.contact_json), quote: JSON.parse(row.quote_json), originalVerification:JSON.parse(row.verification_json),verification: JSON.parse(update?.verification_json||row.verification_json),lastKycSubmissionAt:update?.created_at||null,supportRequests, events };
     },
     orders(session) { return db.prepare("SELECT id, status, created_at, json_extract(quote_json,'$.sessionId') AS journey_id FROM orders WHERE session_hash=? ORDER BY created_at DESC").all(session).map(r => ({ id: r.id, status: r.status, createdAt: r.created_at, sessionId:r.journey_id||null })); },
@@ -81,10 +86,15 @@ export function createStore(path) {
       return {id,topic,message,status:'received',createdAt};
     },
     getSupportQueue() {
-      return db.prepare(`SELECT r.id,r.order_id AS orderId,r.topic,r.message,r.status,r.created_at AS createdAt,o.status AS orderStatus,o.profile_json AS profileJson,o.quote_json AS quoteJson,o.verification_json AS verificationJson FROM support_requests r JOIN orders o ON o.id=r.order_id ORDER BY CASE r.status WHEN 'received' THEN 0 ELSE 1 END,r.created_at`).all().map(r=>{
+      return db.prepare(`SELECT r.id,r.order_id AS orderId,r.topic,r.message,r.status,r.created_at AS createdAt,o.status AS orderStatus,o.profile_json AS profileJson,o.quote_json AS quoteJson,o.verification_json AS verificationJson FROM support_requests r JOIN orders o ON o.id=r.order_id WHERE NOT EXISTS (SELECT 1 FROM hidden_support_requests h WHERE h.request_id=r.id) ORDER BY CASE r.status WHEN 'received' THEN 0 ELSE 1 END,r.created_at`).all().map(r=>{
         const p=JSON.parse(r.profileJson),q=JSON.parse(r.quoteJson),v=JSON.parse(r.verificationJson);
         return {id:r.id,orderId:r.orderId,topic:r.topic,message:redact(r.message),status:r.status,replies:this.supportReplies(r.id),createdAt:r.createdAt,orderStatus:r.orderStatus,segment:p.segment,employees:p.employees,sites:p.sites,monthlyMin:q.monthly,monthlyMax:q.monthlyMax??q.monthly,kycStatus:v.status};
       });
+    },
+    hideSupportRequest(id) {
+      if(!db.prepare('SELECT 1 FROM support_requests WHERE id=?').get(id))return false;
+      db.prepare('INSERT OR IGNORE INTO hidden_support_requests VALUES(?,?)').run(id,new Date().toISOString());
+      return true;
     },
     resolveSupportRequest(id) { return db.prepare("UPDATE support_requests SET status='reviewed' WHERE id=?").run(id).changes>0; },
     supportReplies(id){return db.prepare('SELECT id,message,status,created_at AS createdAt FROM support_replies WHERE request_id=? ORDER BY rowid').all(id);},
@@ -101,8 +111,21 @@ export function createStore(path) {
        db.prepare('INSERT INTO order_events VALUES(?,?,?,?,?)').run(randomUUID(),id,'kyc_resubmitted','Customer submitted updated document checks for the existing order.',now);db.exec('COMMIT');
       }catch(e){db.exec('ROLLBACK');throw e;}return this.getOrder(owner,id);
     },
+    approveOrdersForCase(owner,caseId,verification){
+      if(verification?.status!=='passed'||verification?.reviewerDecision?.decision!=='approved')return 0;
+      const rows=db.prepare("SELECT id FROM orders WHERE session_hash=? AND status NOT IN ('activated','order_cancelled') AND json_extract(verification_json,'$.caseId')=?").all(owner,caseId);
+      let updated=0;db.exec('BEGIN IMMEDIATE');try{for(const row of rows){
+        const order=this.getOrder(owner,row.id);
+        if(order.verification.reviewerDecision?.decidedAt===verification.reviewerDecision.decidedAt)continue;
+        const now=verification.reviewerDecision.decidedAt||new Date().toISOString();
+        db.prepare('INSERT INTO order_kyc_updates VALUES(?,?,?,?)').run(randomUUID(),row.id,JSON.stringify(verification),now);
+        if(order.status==='review_required')db.prepare("UPDATE orders SET status='ready_for_scheduling' WHERE id=?").run(row.id);
+        db.prepare('INSERT INTO order_events VALUES(?,?,?,?,?)').run(randomUUID(),row.id,'kyc_complete','Simulated reviewer approved the assessed evidence; this does not establish government authentication.',now);
+        updated++;
+      }db.exec('COMMIT');}catch(error){db.exec('ROLLBACK');throw error;}return updated;
+    },
     holdOrdersForCase(owner,caseId){
-      const rows=db.prepare("SELECT id FROM orders WHERE session_hash=? AND json_extract(verification_json,'$.caseId')=?").all(owner,caseId);
+      const rows=db.prepare("SELECT id FROM orders WHERE session_hash=? AND status NOT IN ('activated','order_cancelled') AND json_extract(verification_json,'$.caseId')=?").all(owner,caseId);
       db.exec('BEGIN IMMEDIATE');try{for(const row of rows){
         const current=this.getOrder(owner,row.id),{sourceVerificationId,addressedDecisionId,...snapshot}=current.verification,now=new Date().toISOString();
         db.prepare('INSERT INTO order_kyc_updates VALUES(?,?,?,?)').run(randomUUID(),row.id,JSON.stringify({...snapshot,status:'review_required',issues:['The reviewer requested document corrections or rejected the evidence. Review the document messages before continuing.']}),now);
@@ -110,15 +133,38 @@ export function createStore(path) {
         db.prepare('INSERT INTO order_events VALUES(?,?,?,?,?)').run(randomUUID(),row.id,'kyc_review_requested','The reviewer requested document corrections or further review.',now);
       }db.exec('COMMIT');}catch(e){db.exec('ROLLBACK');throw e;}
     },
-    advanceDemoOrder(session,orderId) {
-      const current=this.getOrder(session,orderId);
-      if(!current||current.verification.status!=='passed')return null;
-      const next={ready_for_scheduling:['installation_scheduled','Installation scheduling simulated for demo.'],installation_scheduled:['installed','Installation completion simulated for demo.'],installed:['activated','Service activation simulated for demo.']}[current.status];
-      if(!next)return current;
-      const occurredAt=new Date().toISOString();
-      db.prepare('UPDATE orders SET status=? WHERE session_hash=? AND id=?').run(next[0],session,orderId);
-      db.prepare('INSERT INTO order_events VALUES(?,?,?,?,?)').run(randomUUID(),orderId,next[0],next[1],occurredAt);
-      return this.getOrder(session,orderId);
+    operationsOrders() {
+      return db.prepare(`SELECT id,status,created_at AS createdAt,
+        (SELECT count(*) FROM order_events WHERE order_id=orders.id) AS version
+        FROM orders ORDER BY created_at DESC`).all();
+    },
+    updateFulfillment(id, {action, version, description, expectedDate}, actor) {
+      const fail=(message,status=409)=>{throw Object.assign(new Error(message),{status});};
+      const transitions={
+        ready_for_scheduling:{schedule:'installation_scheduled'},
+        installation_scheduled:{start:'installation_in_progress',delay:'installation_scheduled'},
+        installation_in_progress:{complete:'activation_pending',delay:'installation_in_progress'},
+        activation_pending:{activate:'activated'},installed:{activate:'activated'}
+      };
+      if(typeof description!=='string'||description.trim().length<3||description.length>500)fail('Enter an update description (3–500 characters).',400);
+      const dated=['schedule','delay'].includes(action);
+      if(dated && (!/^\d{4}-\d{2}-\d{2}$/.test(expectedDate)||!Number.isFinite(Date.parse(expectedDate))||new Date(expectedDate).toISOString().slice(0,10)!==expectedDate||expectedDate<new Date().toLocaleDateString('en-CA',{timeZone:'Asia/Kolkata'})))fail('Choose today or a future date.',400);
+      db.exec('BEGIN IMMEDIATE');
+      try {
+        const row=db.prepare('SELECT session_hash FROM orders WHERE id=?').get(id);
+        if(!row)fail('Order not found.',404);
+        const order=this.getOrder(row.session_hash,id);
+        if(order.events.length!==version)fail('This order changed. Reload the staff queue.');
+        if(['activated','order_cancelled'].includes(order.status))fail('This order is closed.');
+        const next=action==='cancel'?'order_cancelled':transitions[order.status]?.[action];
+        if(typeof next!=='string'||(action!=='cancel'&&order.verification.status!=='passed'))fail('This update is unavailable at the current order or KYC stage.');
+        const now=new Date().toISOString(),eventId=randomUUID();
+        db.prepare('UPDATE orders SET status=? WHERE id=?').run(next,id);
+        db.prepare('INSERT INTO order_events VALUES(?,?,?,?,?)').run(eventId,id,action==='delay'?'installation_delayed':next,redact(description.trim()),now);
+        db.prepare('INSERT INTO fulfillment_history VALUES(?,?,?,?,?,?)').run(eventId,id,order.status,next,actor,dated?expectedDate:null);
+        db.exec('COMMIT');
+        return {status:next,version:version+1};
+      } catch(error){db.exec('ROLLBACK');throw error;}
     },
     handoffLead(leadId,priorityScore,reason) {
       const createdAt=new Date().toISOString();
