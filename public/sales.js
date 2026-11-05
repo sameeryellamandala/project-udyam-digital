@@ -38,12 +38,18 @@ function renderQueue(){
 }
 function renderSupportQueue(){
  const cases=data.supportCases||[];
- $('#support-queue').innerHTML=cases.map(x=>`<tr><td><b>${esc(x.orderId.slice(0,16))}…</b></td><td>${esc(x.topic)}<div class="support-message">${esc(x.message||'No message provided.')}</div>${(x.replies||[]).map(r=>`<div class="support-reply"><b>Staff · ${esc(r.status)}</b><p>${esc(r.message)}</p><small>${esc(new Date(r.createdAt).toLocaleString())}</small></div>`).join('')}</td><td>${esc(x.orderStatus)}</td><td>${esc(x.segment)}<small>${esc(x.employees)} employees · ${esc(x.sites)} site(s) · ${money(x.monthlyMin)}–${money(x.monthlyMax)}/mo</small></td><td>${esc(x.kycStatus)}</td><td>${esc(new Date(x.createdAt).toLocaleString())}<small>${esc(x.status)}</small></td><td><form class="support-reply-form" data-reply="${esc(x.id)}"><label>Reply to customer<textarea class="field" name="message" minlength="5" maxlength="1000" required rows="3"></textarea></label><label>Status<select class="field" name="status"><option value="replied">Replied</option><option value="resolved">Resolved</option></select></label><button class="btn" type="submit">Send reply</button></form></td></tr>`).join('')||'<tr><td colspan="7">No customer help requests yet.</td></tr>';
+ $('#support-queue').innerHTML=cases.map(x=>`<tr><td><b>${esc(x.orderId.slice(0,16))}…</b></td><td>${esc(x.topic)}<div class="support-message">${esc(x.message||'No message provided.')}</div>${(x.replies||[]).map(r=>`<div class="support-reply"><b>Staff · ${esc(r.status)}</b><p>${esc(r.message)}</p><small>${esc(new Date(r.createdAt).toLocaleString())}</small></div>`).join('')}</td><td>${esc(x.orderStatus)}</td><td>${esc(x.segment)}<small>${esc(x.employees)} employees · ${esc(x.sites)} site(s) · ${money(x.monthlyMin)}–${money(x.monthlyMax)}/mo</small></td><td>${esc(x.kycStatus)}</td><td>${esc(new Date(x.createdAt).toLocaleString())}<small>${esc(x.status)}</small></td><td><form class="support-reply-form" data-reply="${esc(x.id)}"><label>Reply to customer<textarea class="field" name="message" minlength="5" maxlength="1000" required rows="3"></textarea></label><label>Status<select class="field" name="status"><option value="replied">Replied</option><option value="resolved">Resolved</option></select></label><button class="btn" type="submit">Send reply</button></form><button type="button" class="text-btn" data-delete-support="${esc(x.id)}">Delete from queue</button></td></tr>`).join('')||'<tr><td colspan="7">No customer help requests yet.</td></tr>';
+ document.querySelectorAll('[data-delete-support]').forEach(button=>button.addEventListener('click',async()=>{
+   if(!confirm('Remove this help request from the staff queue? The customer history will be kept.'))return;
+   button.disabled=true;
+   try{await request('/api/sales/support/delete',{id:button.dataset.deleteSupport});await load();$('#staff-status').textContent='Request removed from the staff queue.';}
+   catch(error){$('#staff-status').textContent=error.message;button.disabled=false;}
+ }));
  document.querySelectorAll('[data-reply]').forEach(form=>form.onsubmit=async e=>{e.preventDefault();const button=form.querySelector('button');button.disabled=true;try{await request('/api/sales/support/reply',{id:form.dataset.reply,message:form.elements.message.value,status:form.elements.status.value});await load();$('#staff-status').textContent='Reply saved. The customer can refresh their order tracker to read it.';}catch(error){$('#staff-status').textContent=error.message;button.disabled=false;}});
 }
 async function load(){
   $('#notice').textContent='Loading synthetic lead data…';
-  try{data=await request('/api/sales/queue');$('#staff-login').hidden=true;$('#sales-workspace').hidden=false;renderMetrics();renderFilters();renderQueue();renderSupportQueue();$('#notice').textContent='Synthetic lead data loaded. Names and contact identifiers are excluded.';}
+  try{data=await request('/api/sales/queue');$('#staff-login').hidden=true;$('#sales-workspace').hidden=false;renderMetrics();renderFilters();renderQueue();renderSupportQueue();await loadOperations();$('#notice').textContent='Synthetic lead data loaded. Names and contact identifiers are excluded.';}
   catch(error){$('#staff-status').textContent=error.message;if(error.status===401){$('#staff-login').hidden=false;$('#sales-workspace').hidden=true;$('#support-queue').innerHTML='';}}
 }
 $('#refresh').addEventListener('click',load);
@@ -53,3 +59,32 @@ load();
 
 $('#staff-login-form').onsubmit=async e=>{e.preventDefault();try{await request('/api/kyc/reviewer/login',{token:$('#staff-code').value});$('#staff-code').value='';$('#staff-status').textContent='Signed in to the local staff demo.';await load();}catch(error){$('#staff-code').value='';$('#staff-status').textContent=error.message;}};
 $('#staff-logout').onclick=async()=>{await request('/api/kyc/reviewer/logout',{});$('#sales-workspace').hidden=true;$('#support-queue').innerHTML='';$('#staff-login').hidden=false;$('#staff-status').textContent='Signed out.';};
+
+async function loadOperations(){
+ const {orders}=await request('/api/sales/orders');
+ const actions={ready_for_scheduling:['schedule'],installation_scheduled:['start','delay'],installation_in_progress:['complete','delay'],activation_pending:['activate'],installed:['activate']};
+ const actionLabels={schedule:'Schedule installation',start:'Mark installation started',delay:'Report installation delay',complete:'Mark installation complete',activate:'Mark service activated (demo)',cancel:'Cancel order'};
+ const statusLabels={review_required:'KYC review required',ready_for_scheduling:'Ready for scheduling',installation_scheduled:'Installation scheduled',installation_in_progress:'Installation in progress',activation_pending:'Activation pending',installed:'Installation complete',activated:'Activated (demo)',order_cancelled:'Cancelled'};
+ $('#operations-orders').innerHTML=orders.map(o=>{
+   const terminal=['activated','order_cancelled'].includes(o.status),options=terminal?[]:[...(actions[o.status]||[]),'cancel'];
+   const dateMin=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Kolkata'}).format(new Date());
+   return `<details class="operation-order"><summary><span class="operation-order-id">${esc(o.id)}</span><span class="stage-pill operation-stage ${esc(o.status)}">${esc(statusLabels[o.status]||o.status.replaceAll('_',' '))}</span></summary>${options.length?`<form class="operation-form" data-ops="${esc(o.id)}" data-version="${o.version}"><p class="operation-hint">Record the next staff update for this order. The customer will see it in the tracker after refresh.</p><div class="operation-fields"><div class="field-group"><label class="field-label" for="action-${esc(o.id)}">Next step</label><select class="field" id="action-${esc(o.id)}" name="action">${options.map(a=>`<option value="${a}">${actionLabels[a]}</option>`).join('')}</select></div><div class="field-group operation-date-field" data-date-group hidden><label class="field-label" data-date-label for="date-${esc(o.id)}">Expected installation date</label><input class="field" id="date-${esc(o.id)}" name="expectedDate" type="date" min="${dateMin}"><small class="hint">Required to schedule or report a delay.</small></div><div class="field-group operation-message-field"><label class="field-label" for="message-${esc(o.id)}">Customer update</label><textarea class="field" id="message-${esc(o.id)}" name="description" minlength="3" maxlength="500" required rows="3" placeholder="Example: Installation is planned for the confirmed date."></textarea></div></div><p class="operation-demo-note">Demo update only · no installer is contacted and no service is provisioned.</p><button class="btn" type="submit">Save order update</button></form>`:`<p class="operation-state-note">${o.status==='review_required'?'KYC review must pass before installation can be scheduled.':terminal?'No further staff updates are available for this order.':'No operations are available at this stage.'}</p>`}</details>`;
+ }).join('')||'No orders yet.';
+ for(const form of document.querySelectorAll('[data-ops]'))form.onsubmit=async event=>{
+   event.preventDefault();const button=form.querySelector('button');button.disabled=true;
+   try{await request('/api/sales/orders/update',{...Object.fromEntries(new FormData(form)),id:form.dataset.ops,version:Number(form.dataset.version)});await loadOperations();$('#staff-status').textContent='Order updated.';}
+   catch(error){$('#staff-status').textContent=error.message;button.disabled=false;}
+ };
+ for(const form of document.querySelectorAll('[data-ops]')){
+   const dateGroup=form.querySelector('[data-date-group]'),dateInput=form.elements.expectedDate;
+   const updateDate=()=>{const action=form.elements.action.value,show=['schedule','delay'].includes(action);dateGroup.hidden=!show;dateInput.required=show;form.querySelector('[data-date-label]').textContent=action==='delay'?'Revised installation date':'Expected installation date';};
+   form.elements.action.addEventListener('change',updateDate);updateDate();
+ }
+}
+
+$('#toggle-priority-queue').addEventListener('click',event=>{
+  const content=$('#priority-queue-content');
+  content.hidden=!content.hidden;
+  event.currentTarget.textContent=content.hidden?'View queue':'Hide queue';
+  event.currentTarget.setAttribute('aria-expanded',String(!content.hidden));
+});

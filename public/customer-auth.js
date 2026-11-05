@@ -18,7 +18,21 @@ export async function initializeAccount(){
   if(signedIn){
    button.hidden=true;clerk.mountUserButton(document.querySelector('#customer-user'));
    document.querySelector('#customer-sign-out').hidden=false;
-   document.querySelector('#customer-sign-out').onclick=async()=>{await clerk.signOut();sessionStorage.removeItem('udyam_active_chat');location.href='/';};
+   document.querySelector('#customer-sign-out').onclick=async event=>{
+    const signOutButton=event.currentTarget;
+    signOutButton.disabled=true;
+    signOutButton.textContent='Signing out…';
+    try{
+     await clerk.signOut({redirectUrl:location.origin+'/'});
+     sessionStorage.removeItem('udyam_active_chat');
+     location.replace('/');
+    }catch{
+     signOutButton.disabled=false;
+     signOutButton.textContent='Sign out';
+     notice.hidden=false;
+     notice.textContent='Could not sign out. Please try again.';
+    }
+   };
    notice.hidden=false;notice.innerHTML='<span>Signed in. Your orders and chats belong to your account.</span> <button class="text-btn" type="button" id="claim-browser-records">Link this browser’s previous records</button><small>Only records owned by this browser session can be linked. Uploaded KYC files are kept for up to seven days.</small>';
    document.querySelector('#claim-browser-records').onclick=async e=>{
     e.target.disabled=true;
