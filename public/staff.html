@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#f7f7f2" />
+  <title>Staff portal | Udyam Digital</title>
+  <link rel="stylesheet" href="style.css?v=staff-portal-20261104" />
+</head>
+<body class="staff-portal-page">
+  <header class="topbar">
+    <a class="brand" href="/"><span class="brand-mark">a</span><span>accel<span class="brand-light"> business</span></span></a>
+    <nav class="staff-nav" aria-label="Staff navigation">
+      <a href="/sales.html">Sales</a>
+      <a href="/kyc-review.html">KYC Review</a>
+      <a href="/">Customer site</a>
+    </nav>
+    <button class="text-btn" id="sign-out" type="button" hidden>Sign out</button>
+  </header>
+  <main class="staff-portal">
+    <p class="eyebrow">INTERNAL WORKSPACE</p>
+    <h1>Staff portal</h1>
+    <p class="card-sub">Sign in once to open the Sales desk or Smart KYC review.</p>
+    <p id="staff-status" class="status-card" role="status" aria-live="polite">Checking staff session…</p>
+    <section id="staff-login" class="card staff-portal-login" hidden>
+      <h2>Staff sign-in</h2>
+      <p class="hint">Use the staff access code provided by your project administrator.</p>
+      <form id="staff-login-form">
+        <label class="field-label" for="staff-code">Staff access code</label>
+        <input class="field" type="password" id="staff-code" autocomplete="current-password" maxlength="256" required />
+        <button class="btn full" type="submit">Sign in</button>
+      </form>
+    </section>
+    <section id="staff-workspace" class="staff-workspace" hidden>
+      <div class="status-card">Signed in to the shared staff demo. Your staff session also works on the Sales and KYC Review pages.</div>
+      <div class="staff-destinations">
+        <a class="card staff-destination" href="/sales.html"><span class="eyebrow">CUSTOMER FOLLOW-UP</span><h2>Sales desk</h2><p>Review synthetic leads, order updates, and customer help requests.</p><b>Open Sales →</b></a>
+        <a class="card staff-destination" href="/kyc-review.html"><span class="eyebrow">DOCUMENT REVIEW</span><h2>Smart KYC Review</h2><p>Review submitted document cases and record a simulated decision.</p><b>Open KYC Review →</b></a>
+      </div>
+      <p class="hint">This prototype uses one shared staff access code for both areas. Use synthetic data only.</p>
+    </section>
+  </main>
+  <script type="module" src="staff.js?v=staff-portal-fix-20261104"></script>
+</body>
+</html>

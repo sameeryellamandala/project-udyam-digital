@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Sales Follow-up Desk | Udyam Digital</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="sales.css?v=operations-ui-20261104" />
+</head>
+<body>
+  <header class="topbar"><a class="brand" href="/"><span class="brand-mark">a</span><span>accel<span class="brand-light"> business</span></span></a><nav class="staff-nav" aria-label="Staff navigation"><a href="/staff.html">Staff portal</a><a href="/sales.html" aria-current="page">Sales</a><a href="/kyc-review.html">KYC Review</a><a href="/">Customer site</a></nav></header>
+  <div class="demo-banner">Sales follow-up · Synthetic hackathon data only · Rules-based priority, not a purchase prediction</div>
+  <section class="card staff-login" id="staff-login"><h2>Staff sign-in</h2><p>Authorized local demo staff only. Use the configured reviewer access code.</p><form id="staff-login-form"><label class="field-label" for="staff-code">Staff access code</label><input class="field" type="password" id="staff-code" autocomplete="off" required><button class="btn" type="submit">Sign in</button></form></section><p class="sales-shell" id="staff-status" role="status"></p><main class="sales-shell" id="sales-workspace" hidden>
+    <div class="sales-heading"><div><p class="eyebrow">INTERNAL DEMO</p><h1>Sales follow-up desk</h1><p class="card-sub">Review dropped enquiries, see why they may need help, and queue cases for a salesperson.</p></div><div><button id="staff-logout" class="text-btn">Sign out</button><button id="refresh" class="btn">Refresh list</button></div></div>
+    <div id="notice" class="status-card">Loading synthetic lead data…</div>
+    <section id="metrics" class="metrics" aria-label="Lead summary"></section>
+    <section class="card queue-card"><div class="queue-heading"><div><h2>Priority queue</h2><button type="button" class="btn" id="toggle-priority-queue" aria-expanded="true" aria-controls="priority-queue-content">Hide queue</button><p class="hint">No customer names, phone numbers, or registration IDs are shown.</p></div><div class="filters"><label for="priority-filter">Priority</label><select id="priority-filter"><option value="all">All</option><option>High</option><option>Medium</option><option>Low</option></select><label for="segment-filter">Segment</label><select id="segment-filter"><option value="all">All segments</option></select></div></div>
+      <div id="priority-queue-content"><div class="table-wrap"><table><thead><tr><th>Lead</th><th>Business context</th><th>Stage and blocker</th><th>Interested products</th><th>Estimated monthly range</th><th>Priority factors</th><th>Sales handoff</th></tr></thead><tbody id="queue"></tbody></table></div>
+      <p id="queue-count" class="hint"></p></div>
+    </section>
+    <section class="card operations-card"><h2>Installation and activation</h2><p class="card-sub">Record staff updates for eligible orders. Updates appear in the customer tracker; this demo does not contact an installer or activate real service.</p><div class="operations-list" id="operations-orders"></div></section><section class="card support-queue"><div class="queue-heading"><div><h2>Customer help requests</h2><p class="hint">Reply to the customer here. Replies appear in their order tracker after refresh. Common identifiers are hidden.</p></div></div><div class="table-wrap"><table><thead><tr><th>Order</th><th>Topic and customer message</th><th>Order status</th><th>Business context</th><th>KYC</th><th>Received</th><th>Staff reply</th></tr></thead><tbody id="support-queue"></tbody></table></div></section>
+    <p class="demo-note">Handoff and review actions are saved in this local demo queue. No salesperson is notified or assigned. Do not use this view with real customer data.</p>
+  </main>
+  <script type="module" src="sales.js"></script>
+</body>
+</html>
