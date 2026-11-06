@@ -14,9 +14,12 @@ test('actual supplied images match their fields but a cancelled GST still requir
   assert.ok(read.find(r=>r.kind==='signatory').fields.signatoryName==='Neha Kaur','Known synthetic signatory should be extracted correctly');
   const p=profile({businessName:gst.trade_name,segment:'prof',employees:5,sites:1,cityTier:1,budget:3000,needs:['internet'],gstin:gst.gstin});
   const result=await verify(data,{},p,{consent:true,extractionMethod:'local',documents:docs,contactName:'Neha Kaur'});
-  assert.equal(result.extractionMode,'local');assert.equal(result.status,'review_required');assert.equal(result.documents.length,3);
-  assert.ok(result.documents.every(d=>d.status==='matched'));assert.ok(result.issues.includes('GST registration is not active.'));
+  assert.equal(result.extractionMode,'local');assert.equal(result.status,'review_required');assert.equal(result.documents.filter(d=>d.uploaded).length,3);
+  assert.ok(result.documents.filter(d=>['address','signatory'].includes(d.kind)).every(d=>d.status==='matched'));assert.ok(result.documents.find(d=>d.kind==='gst').findings.some(f=>f.code==='registration_inactive'));assert.ok(result.issues.includes('GST registration is not active.'));
   assert.ok(!JSON.stringify(result).includes(gst.gstin),'Raw identifiers must not escape in verification results');
+  const reviewed=result.documents.find(d=>d.kind==='gst').reviewFields;
+  assert.ok(reviewed.gstin.endsWith(gst.gstin.slice(-4)));
+  assert.ok(!JSON.stringify(reviewed).includes(gst.gstin));
 });
 test('image dimensions are bounded before OCR and external processing requires explicit consent',async()=>{
   const b=Buffer.alloc(24);Buffer.from([137,80,78,71,13,10,26,10]).copy(b);b.writeUInt32BE(999999,16);b.writeUInt32BE(999999,20);

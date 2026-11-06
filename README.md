@@ -1,41 +1,74 @@
 # Udyam Digital
 
-A local hackathon prototype for Accel Business: discover suitable business services, build a transparent quote, submit KYC for checking and save/track an order.
+Local hackathon application for catalogue recommendations, customer onboarding, document checks and order tracking. All supplied businesses, identifiers and registry records are fictional.
 
-## Start
-Requires Node.js 24 or newer. From this folder:
+## Run
+
+Node.js 24+ is required. Preserve existing `.env` and `var/` files.
 
 ```powershell
-Copy-Item .env.example .env
+if (-not (Test-Path .env)) { Copy-Item .env.example .env }
 npm ci
+npm run kyc:setup
+npm run db:migrate
 npm start
 ```
 
-Open [http://localhost:3000](http://localhost:3000). Install from the lockfile with `npm ci`; this includes the local OCR reader and English model. Copy `.env.example` only if `.env` does not already exist. Do not open `index.html` directly; the screens use the backend.
+Open http://localhost:3000. Customer sign-in through Clerk is mandatory before opening business setup or placing orders. Configure `CLERK_PUBLISHABLE_KEY` and `CLERK_SECRET_KEY` in ignored `.env`. Never publish the secret key. Clerk handles Google/email sign-in according to its dashboard settings.
 
-For live testing, set `GROQ_API_KEY` in your private `.env` and keep `AI_PROVIDER=groq`. The default testing model is `openai/gpt-oss-120b`, served by Groq. Your account's usage limits apply. Without a key or during an outage, the app uses labelled guided discovery. No key is included in the source package. Local OCR reads the supplied English forms on this computer. This is synthetic data; no real government or installation service is connected.
+For a new local PostgreSQL installation, start Docker Desktop and run `npm run db:setup` before migrations. For the existing installation, use `docker start udyam-advisor-postgres`. Never remove its volume to fix tests. PostgreSQL holds conversations and requirements; SQLite in `var/` holds orders, support and encrypted KYC records.
 
-## Project documents
-Start with [requirements](PRD.md), [implementation plan](implementation-plan.md), [design](design.md), [architecture](architecture.md), [database](database.md), [API](API.md) and [agent instructions](AGENTS.md).
+Set `GROQ_API_KEY` and `AI_PROVIDER=groq` for live advice. Provider limits apply. Optional providers are configured in `.env.example`; no paid fallback is automatic. Local English OCR needs no model API key, supports JPEG/PNG/PDF, and allows up to four pages per PDF and 2 MB per file.
 
-Operational guides: [installation](setup-and-installation.md), [initialization](initialization.md), [feature development](feature-development.md), [security](authentication-and-security.md), [integrations](integrations.md), [MCP](mcp-connections.md), [QA](testing-and-qa.md), [debugging](debugging.md), [submission](submission-checklist.md).
+## Customer and staff flows
 
-## Status and limits
-Implemented: CSV-backed recommendations, editable server-priced quotes, consent and mock registry checks, an optional AI chat/image extraction adapter, and SQLite-backed session-owned orders. The no-key assisted-review journey has been walked through in the browser, including refresh and mobile tracker layout. Automated rule/API checks are included.
+- Customers sign in, choose services, review the fixed demo quote, complete consented document checks and track orders.
+- Account orders/chats expire after seven days of inactivity. KYC files expire after seven days from case creation. Existing guest records require explicit linking from their original browser session; names/emails do not grant ownership.
+- Staff start from the main page's **Staff portal** link, enter the access code configured as `KYC_REVIEWER_TOKEN` once, then use the portal navigation to open Sales or KYC Review. Customer Clerk login does not grant staff access. The same shared demo staff session authorizes both pages; it is not a production role system.
+- Sales replies and reviewer correction messages appear when the customer refreshes the tracker. Corrected documents update the existing order without changing its original quote.
+- Prices and rules come from the supplied catalogue. The fixed demo quote uses catalogue minimums, with the original range shown for reference. Actual provider price and availability need confirmation; taxes are excluded.
+- Government lookups, staff workflows and installation/activation are simulations. No payments, real provisioning, email or WhatsApp messages are connected. Staff authentication is shared local authorization, not production role management.
 
-Groq has been tested live with synthetic English and Hindi inputs, and the browser walkthrough exercised the live advisor. All 47 supplied images have been processed locally: 44 meet parser readability requirements and three need a clearer image/manual review. Matching fields never override cancelled registrations or expired documents. Saved orders belong to this browser session; there is no cross-device login yet. Taxes are excluded, rates use catalogue minimums, and installation times are estimates requiring confirmation. Raw documents are not saved. English/Hindi controls, service descriptions and common errors are localized; canonical product names stay as supplied. No real partner receives the review orders.
+## Checks
 
-## Development
-`npm test` runs isolated automated tests. Local data is in ignored `var/`. Server exposes only approved web assets, not the dataset, database, environment or source archives.
+```powershell
+npm test
+npm run test:postgres
+npm run analyze
+npm run check:smart-kyc
+```
 
-## Business evidence and demonstration
-Run `npm run analyze` to regenerate the aggregate [lead report](reports/lead-analysis.md), without customer records in the output. Review [business-case content](business-case.md), the [privacy note](privacy-note.md) and [demo script](demo-script.md) for submission preparation.
+Tests use isolated databases. PostgreSQL integration creates and drops only its temporary test database. `npm run check:ai` runs live synthetic prompts and consumes provider quota. `python scripts/package-source.py` builds an allowlisted source ZIP without secrets, installed dependencies or customer databases.
 
-## Provider settings
-For a later paid OpenAI evaluation, explicitly set `AI_PROVIDER=openai`, `OPENAI_API_KEY` and `OPENAI_MODEL`, then restart. There is no automatic paid fallback. Groq testing uses local OCR. External image reading requires the explicit OpenAI setup and separate consent.
+## Project reference
 
-## Submission outputs
-`output/submission/` contains the editable ten-slide deck, one-page privacy PDF, architecture PDF, narrated app-screen demo and source ZIP. The video uses actual captured app screens with local synthesized narration. A public code repository has not been published. See `reports/final-qa.md` for evidence and limitations.
+- [Project instructions](AGENTS.md)
+- [Requirements](docs/PRD.md)
+- [Architecture](docs/architecture.md)
+- [Implementation history](docs/implementation-plan.md)
+- [API](docs/API.md)
+- [Smart KYC](docs/smart-kyc.md)
+- [Privacy](docs/privacy-note.md)
+- [Business case content](docs/business-case.md)
+- [Submission checklist](docs/submission-checklist.md)
 
-## Additional checks
-`node scripts/check-documents.mjs` checks the entire image pack locally. `node scripts/check-ai.mjs en` or `hi` makes a live synthetic provider test and consumes quota. `python scripts/package-source.py` creates an allowlisted archive excluding `.env`, local orders and dependencies.
+`reports/` retains aggregate lead analysis, specimen validation and dataset integrity evidence. The supplied dataset stays unchanged in `YTL_TrackA_Udyam_Digital_Data/`. Original source archives and the confidential case materials are kept locally and are not included in this repository. Existing `output/submission/` deliverables are retained, but predate recent account/reply changes and need updating before submission. The latest round calls for one introduction plus seven evaluated slides, a presentation below 20 MB and a demo hyperlink; deadline: 7 November 2026 at 11:59 PM.
+
+## Folder layout
+
+```text
+public/          Customer, sales and reviewer HTML/CSS/JavaScript
+src/             Backend rules, AI, authentication and storage
+tests/           Rule, API, security, OCR and database tests
+scripts/         Setup, migration, analysis and validation tools
+migrations/      PostgreSQL and SQLite schema migrations
+docs/            Requirements, architecture, API and operating notes
+reports/         Aggregate dataset and specimen evidence
+reference/       Local-only case material and source archives
+YTL_TrackA_Udyam_Digital_Data/  Unmodified supplied dataset
+output/          Existing submission deliverables (ignored)
+var/             Private databases and local settings (ignored)
+tmp/             Local scratch files (ignored)
+```
+
+`server.mjs`, package manifests, `README.md` and `AGENTS.md` remain at the root. Web URLs stay unchanged; `public/` is served through the existing asset allowlist, not as an unrestricted directory. `.env` stays at the root and is never served.

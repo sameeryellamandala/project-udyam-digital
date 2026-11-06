@@ -2,8 +2,22 @@ import { recommend, profile } from './catalogue.mjs';
 
 // Explicit rules for the no-key mode. This is never presented as a live LLM.
 export function guidedAdvisor(business,messages,data,unavailable=false){
-  const raw=messages.filter(m=>m.role==='user').at(-1)?.content||'';
+  const userMessages=messages.filter(m=>m.role==='user');
+  const raw=userMessages.at(-1)?.content||'';
   const message=raw.toLowerCase().replace(/[०-९]/g,c=>String('०१२३४५६७८९'.indexOf(c)));
+  const previousAssistant=messages.slice(0,-1).filter(m=>m.role==='assistant').at(-1)?.content?.toLowerCase()||'';
+  const hi=business.language==='hi';
+  const prefix=unavailable?(hi?'लाइव AI उपलब्ध नहीं है। गाइडेड जवाब: ':'Live AI is unavailable. Guided answer: '):'';
+  // A short numeric reply should answer the most recent question, not rebuild the same quote.
+  const bareCount=message.trim().match(/^(\d{1,4})$/);
+  if(bareCount&&/email accounts?|number of email|ईमेल अकाउंट|ईमेल खाते/.test(previousAssistant)){
+    const count=Number(bareCount[1]);
+    const email=data.products.find(p=>p.id==='P16');
+    const reply=hi
+      ?`समझ गया—${count} ईमेल अकाउंट। अभी यह प्रोटोटाइप ईमेल की संख्या कर्मचारियों के आधार पर रखता है। पैकेज में Cloud Email की संख्या ${count} करें; कीमत ${count} × ₹${email.price}/महीना होगी।`
+      :`Got it: ${count} email accounts. This prototype currently starts the email quantity from the employee count. Set Cloud Email to ${count} in the package quote; at the catalogue minimum, that is ${count} × ₹${email.price}/month before taxes.`;
+    return {mode:'guided',reply:prefix+reply,proposedProfile:null};
+  }
   const next={...business}; const changes=[];
   const staff=message.match(/(\d+)\s*(?:employees?|people|staff|users?|कर्मचारी|लोग)/)||message.match(/(?:team of|कर्मचारी)\s*(\d+)/);
   const sites=message.match(/(\d+)\s*(?:sites?|locations?|branches?|stores?|शाखा|दुकान)/);
@@ -19,8 +33,19 @@ export function guidedAdvisor(business,messages,data,unavailable=false){
   const asksWhy=/why|explain|क्यों|समझा/.test(message);
   if(mentioned.length&&!asksWhy){next.needs=mentioned;changes.push('services');}
   let proposed=null;try{if(changes.length)proposed=profile(next);}catch{}
-  const result=recommend(proposed||business,data),hi=business.language==='hi';
-  const prefix=unavailable?(hi?'लाइव AI उपलब्ध नहीं है। ':'Live AI is unavailable. '):'';
+  const result=recommend(proposed||business,data);
+  // Mention the exact catalogue 5G offer when asked; the current automatic rank prefers fibre.
+  if(/\b5g\b|airfiber/.test(message)){
+    const p=result.eligibleProducts.find(p=>p.id==='P04');
+    if(p){
+      const currentInternet=result.quote?.items.find(x=>['P01','P02','P03','P04','P05','P06'].includes(x.productId));
+      const format=n=>n.toLocaleString('en-IN');
+      const reply=hi
+        ?`अच्छा चुनाव। ${p.name}: ${p.description} कैटलॉग कीमत ₹${format(p.price)}–₹${format(p.maxPrice)}/साइट/महीना है। एक बार का सेटअप ₹${format(p.setup)} और न्यूनतम अनुबंध ${p.contractMonths} महीने है। इंस्टॉलेशन का सामान्य अनुमान ${p.installDays} दिन है; उपलब्धता की पुष्टि ज़रूरी है। पैकेज में इसे चुनें और दूसरा इंटरनेट विकल्प हटाएँ।`
+        :`Good choice. ${p.name}: ${p.description} The catalogue monthly price is ₹${format(p.price)}–₹${format(p.maxPrice)} per site. One-time setup is ₹${format(p.setup)}, with a ${p.contractMonths}-month minimum contract. Typical installation is estimated at ${p.installDays} days after availability confirmation. Select it in your package and remove the other internet option.`;
+      return {mode:'guided',reply:prefix+reply,proposedProfile:proposed};
+    }
+  }
   let reply=prefix+(hi?'गाइडेड मोड: ':'Guided mode: ');
   if(changes.length&&!proposed)reply+=hi?'यह संख्या मान्य नहीं है। नीचे दिए विवरण जाँचें।':'That change is outside the supported limits. Please check the business fields.';
   else if(result.quote){

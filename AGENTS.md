@@ -1,6 +1,6 @@
 # Project instructions for coding agents
 
-- Read `PRD.md`, `architecture.md` and `implementation-plan.md` before changing behavior.
+- Read `docs/PRD.md`, `docs/architecture.md` and `docs/implementation-plan.md` before changing behavior.
 - Keep supplied datasets/source archives intact. Use 2026-07-15 for KYC document-age checks; actual timestamps for sessions/orders.
 - Use catalogue data, never invented products/prices. Validate eligibility/dependencies/quantities and reprice on the backend.
 - AI proposes conversational content; deterministic checks own eligibility, prices, consent and order state. No fine-tuning is required.

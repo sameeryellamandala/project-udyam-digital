@@ -11,10 +11,20 @@
     "test": "node --test tests/*.test.mjs",
     "analyze": "node scripts/analyze-leads.mjs",
     "check:documents": "node scripts/check-documents.mjs",
-    "check:ai": "node scripts/check-ai.mjs"
+    "check:ai": "node scripts/check-ai.mjs",
+    "db:setup": "node scripts/setup-postgres.mjs",
+    "db:migrate": "node scripts/migrate-conversations.mjs",
+    "test:postgres": "node scripts/test-postgres.mjs",
+    "kyc:setup": "node scripts/setup-kyc.mjs",
+    "check:smart-kyc": "node scripts/check-smart-kyc.mjs"
   },
   "dependencies": {
+    "@clerk/backend": "^3.26.5",
+    "@langchain/langgraph": "^1.6.0",
+    "@napi-rs/canvas": "^1.1.0",
     "@tesseract.js-data/eng": "^1.0.0",
+    "pdfjs-dist": "^6.4.299",
+    "pg": "^8.23.1",
     "tesseract.js": "^7.0.0"
   }
 }

@@ -1,3 +1,6 @@
+import {normalizeOcrGstin} from './registration.mjs';
+import {gstFormat} from './catalogue.mjs';
+import {createCanvas,loadImage} from '@napi-rs/canvas';
 import { createWorker, PSM } from 'tesseract.js';
 import english from '@tesseract.js-data/eng';
 import { AppError } from './catalogue.mjs';
@@ -37,7 +40,7 @@ function lines(words) {
 const markers = [
   ['gstin', /^GSTIN$/i], ['legal', /^Legal name$/i], ['trade', /^Trade name$/i], ['constitution', /^Constitution$/i],
   ['address', /^Address of principal/i], ['liability', /^Date of liability/i], ['status', /^Registration status/i],
-  ['udyam', /^Udyam reg[. ]*number/i], ['enterprise', /^Enterprise name/i], ['activity', /^Major activity/i], ['city', /^City$/i], ['state', /^State$/i], ['registration', /^Date of registration/i],
+  ['udyam', /^Udyam reg[. ]*number/i], ['enterprise', /^Enterprise name/i], ['activity', /^Major activity/i], ['city', /^City$/i], ['state', /^State$/i], ['registration', /^Date of registration/i], ['classification', /^(?:Enterprise type|Classification|Type of enterprise)/i],
   ['consumer', /^Consumer no/i], ['billed', /^Billed to$/i], ['address', /^Supply address$/i], ['date', /^Bill date$/i], ['units', /^Units consumed$/i], ['amount', /^Amount due/i]
 ];
 export function parseLocalFields(kind, data, width, height) {
@@ -48,11 +51,12 @@ export function parseLocalFields(kind, data, width, height) {
   const values = {};
   for (let i=0;i<rows.length;i++) {
     const start = rows[i].y - height * .011, end = rows[i+1] ? rows[i+1].y - height * .011 : rows[i].y + height * .065;
-    values[rows[i].key] = lines(tableWords.filter(w=>w.bbox.x0 >= width * .39 && w.bbox.y0 >= start && w.bbox.y0 < end)).map(row=>row.text).join(' ').trim();
+    const valueLines=lines(tableWords.filter(w=>w.bbox.x0 >= width * .39 && w.bbox.y0 >= start && w.bbox.y0 < end));
+    values[rows[i].key] = (['gstin','udyam'].includes(rows[i].key)?valueLines.slice(0,1):valueLines).map(row=>row.text).join(' ').trim();
   }
-  const fields = { businessName:'', gstin:'', udyam:'', address:'', documentDate:'', signatoryName:'', validTill:'', readable:false };
-  if (kind === 'gst') { fields.businessName=values.legal||''; fields.gstin=(values.gstin||'').replace(/\s/g,'').toUpperCase(); fields.address=values.address||''; fields.readable=!!(values.legal&&values.gstin); }
-  if (kind === 'udyam') { fields.businessName=values.enterprise||''; fields.udyam=(values.udyam||'').replace(/\s/g,'').toUpperCase(); fields.readable=!!(values.enterprise&&values.udyam); }
+  const fields = { businessName:'', gstin:'', udyam:'', address:'', documentDate:'', signatoryName:'', validTill:'', city:'', state:'', rawText: data?.text || '', readable:false };
+  if (kind === 'gst') { fields.businessName=values.legal||''; const gstRead=normalizeOcrGstin(values.gstin||'');fields.gstin=gstRead.value;if(gstRead.adjusted)fields.gstinReadAdjustment='OCR reading corrected for an ambiguous character. One candidate passes the GSTIN structure and checksum. Please review against the document.'; fields.address=values.address||'';fields.tradeName=values.trade||'';fields.registrationStatus=values.status||'';fields.state=values.state||'';fields.registrationDate=(values.liability||'').match(/\d{4}-\d{2}-\d{2}/)?.[0]||''; fields.readable=!!(values.legal&&values.gstin); }
+  if (kind === 'udyam') { fields.businessName=values.enterprise||''; fields.udyam=(values.udyam||'').replace(/\s/g,'').toUpperCase(); fields.enterpriseClassification=values.classification||'';fields.registrationDate=values.registration||'';fields.majorActivity=values.activity||''; fields.city=values.city||''; fields.state=values.state||''; fields.readable=!!(values.enterprise&&values.udyam); }
   if (kind === 'address') { fields.businessName=values.billed||''; fields.address=values.address||''; fields.documentDate=(values.date||'').match(/\d{4}-\d{2}-\d{2}/)?.[0]||''; fields.readable=!!(values.billed&&values.address&&values.date); }
   if (kind === 'signatory') {
     const content = lines(words.filter(w=>w.bbox.x0 > width*.32 && w.bbox.y0 > height*.16 && w.bbox.y0 < height*.8)).map(row=>row.text).join('\n');
@@ -76,10 +80,56 @@ export async function extractLocal(documents) {
     for (const doc of documents) {
       const bytes=Buffer.from(doc.dataUrl.split(',')[1],'base64'), {width,height}=imageSize(bytes);
       const { data }=await worker.recognize(bytes, {}, { text:true, blocks:true });
-      results.push({ kind:doc.kind, fields:parseLocalFields(doc.kind,data,width,height) });
+      let fields=parseLocalFields(doc.kind,data,width,height);
+      // A bounded second pass handles skew and pale watermarks. Original bytes
+      // remain untouched; preprocessing and OCR text live only for this request.
+      if(!fields.readable||(doc.kind==='gst'&&!gstFormat(fields.gstin))){
+        const image=await loadImage(bytes),scale=Math.min(1.5,2200/Math.max(width,height));
+        const canvas=createCanvas(Math.round(width*scale),Math.round(height*scale)),ctx=canvas.getContext('2d');
+        ctx.fillStyle='white';ctx.fillRect(0,0,canvas.width,canvas.height);ctx.drawImage(image,0,0,canvas.width,canvas.height);
+        const pixels=ctx.getImageData(0,0,canvas.width,canvas.height);
+        for(let i=0;i<pixels.data.length;i+=4){const v=Math.min(255,Math.max(0,(Math.min(pixels.data[i],pixels.data[i+1],pixels.data[i+2])-128)*1.3+128));pixels.data[i]=pixels.data[i+1]=pixels.data[i+2]=v;}
+        ctx.putImageData(pixels,0,0);
+        const retry=await worker.recognize(canvas.toBuffer('image/png'),{rotateAuto:true},{text:true,blocks:true});
+        const alternative=parseLocalFields(doc.kind,retry.data,canvas.width,canvas.height);
+        const score=f=>Object.entries(f).filter(([k,v])=>v&&!['rawText','readable','gstinReadAdjustment'].includes(k)).length+(doc.kind==='gst'&&gstFormat(f.gstin)?20:0);
+        if(score(alternative)>score(fields))fields=alternative;
+        if(doc.kind==='gst'&&!gstFormat(fields.gstin)){
+          const blocks=retry.data.blocks||[];
+          const words=blocks.flatMap(b=>b.paragraphs||[]).flatMap(p=>p.lines||[]).flatMap(l=>l.words||[]);
+          const label=words.find(w=>/^GSTIN[:]?$/i.test(w.text));
+          if(label){
+            const left=Math.max(Math.ceil(label.bbox.x1+10),Math.floor(canvas.width*.39));
+            const top=Math.max(0,label.bbox.y0-8),cropHeight=Math.min(canvas.height-top,label.bbox.y1-label.bbox.y0+20);
+            await worker.setParameters({tessedit_pageseg_mode:PSM.SINGLE_LINE,tessedit_char_whitelist:'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'});
+            try{
+              const focused=await worker.recognize(canvas.toBuffer('image/png'),{rotateAuto:true,rectangle:{left,top,width:canvas.width-left,height:cropHeight}},{text:true});
+              const candidate=normalizeOcrGstin(focused.data.text).value;
+              if(gstFormat(candidate)){fields.gstin=candidate;fields.gstinReadAdjustment='GSTIN recovered with a focused second reading. Please review against the document.';}
+            }finally{await worker.setParameters({tessedit_pageseg_mode:PSM.SPARSE_TEXT,tessedit_char_whitelist:''});}
+          }
+          if(!gstFormat(fields.gstin))fields.gstinReadUncertain='The GSTIN could not be read confidently. Upload a clearer image or request review.';
+        }
+      }
+      results.push({kind:doc.kind,fields,confidence:Number.isFinite(data.confidence)?data.confidence:null,method:'local_ocr'});
     }
     return results;
   })();
   try { return await Promise.race([task,new Promise((_,reject)=>{timer=setTimeout(()=>{expired=true;reject(new AppError('Document reading timed out. Please use clearer images or retry.',503,'OCR_TIMEOUT'));},45000);})]); }
   finally { clearTimeout(timer); if(worker)await worker.terminate().catch(()=>{}); active--; }
+}
+
+
+// Label-based extraction for actual PDF text layers. No values come from filenames or registries.
+export function parseTextFields(kind,text){
+ const labels=['GSTIN','Legal name','Trade name','Constitution','Address of principal','Date of liability','Registration status','Udyam reg. number','Udyam registration number','Enterprise name','Enterprise type','Classification','Major activity','City','State','Date of registration','Consumer no','Billed to','Supply address','Bill date','Units consumed','Amount due','Name','For business','Valid till'];
+ const rows=String(text).split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
+ const value=label=>{const re=new RegExp('^'+label.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'\\s*[:–-]?\\s*(.*)$','i');for(let i=0;i<rows.length;i++){const match=rows[i].match(re);if(match){if(match[1])return match[1];if(rows[i+1]&&!labels.some(l=>rows[i+1].toLowerCase().startsWith(l.toLowerCase())))return rows[i+1];}}return '';};
+ const fields={businessName:'',gstin:'',udyam:'',address:'',documentDate:'',signatoryName:'',validTill:'',city:'',state:'',rawText:String(text||''),readable:false};
+ if(kind==='gst'){fields.businessName=value('Legal name');fields.gstin=value('GSTIN').replace(/\s/g,'').toUpperCase();fields.address=value('Address of principal');fields.tradeName=value('Trade name');fields.registrationStatus=value('Registration status');fields.state=value('State');fields.registrationDate=value('Date of liability').match(/\d{4}-\d{2}-\d{2}/)?.[0]||'';}
+ if(kind==='udyam'){fields.businessName=value('Enterprise name');fields.udyam=(value('Udyam reg. number')||value('Udyam registration number')).replace(/\s/g,'').toUpperCase();fields.enterpriseClassification=value('Enterprise type')||value('Classification');fields.registrationDate=value('Date of registration');fields.majorActivity=value('Major activity');fields.city=value('City');fields.state=value('State');}
+ if(kind==='address'){fields.businessName=value('Billed to');fields.address=value('Supply address');fields.documentDate=value('Bill date').match(/\d{4}-\d{2}-\d{2}/)?.[0]||'';}
+ if(kind==='signatory'){fields.signatoryName=value('Name');fields.businessName=value('For business');fields.validTill=value('Valid till').match(/\d{4}-\d{2}-\d{2}/)?.[0]||'';}
+ fields.readable=!!({gst:fields.businessName&&fields.gstin,udyam:fields.businessName&&fields.udyam,address:fields.address&&fields.documentDate,signatory:fields.signatoryName}[kind]);
+ return fields;
 }

@@ -1,9 +1,9 @@
 {
   "summary": {
     "total": 47,
-    "readable": 44,
-    "needsClearerImage": 3,
-    "withReviewSignals": 11
+    "readable": 45,
+    "needsClearerImage": 2,
+    "withReviewSignals": 6
   },
   "referenceDate": "2026-07-15",
   "scope": "Student-supplied images only. Extraction/readability and registry/date signals, not a judge answer key or authenticity assessment. Does not establish signatory authority or cross-document identity.",
@@ -15,7 +15,8 @@
       "fieldsPresent": [
         "businessName",
         "address",
-        "documentDate"
+        "documentDate",
+        "rawText"
       ],
       "findings": []
     },
@@ -26,7 +27,10 @@
       "fieldsPresent": [
         "businessName",
         "gstin",
-        "address"
+        "address",
+        "rawText",
+        "tradeName",
+        "registrationDate"
       ],
       "findings": [
         "GST registry is not active"
@@ -39,7 +43,8 @@
       "fieldsPresent": [
         "businessName",
         "signatoryName",
-        "validTill"
+        "validTill",
+        "rawText"
       ],
       "findings": []
     },
@@ -48,7 +53,12 @@
       "kind": "udyam",
       "readable": false,
       "fieldsPresent": [
-        "businessName"
+        "businessName",
+        "city",
+        "state",
+        "rawText",
+        "registrationDate",
+        "majorActivity"
       ],
       "findings": [
         "Clearer image or manual review needed",
@@ -62,22 +72,25 @@
       "fieldsPresent": [
         "businessName",
         "address",
-        "documentDate"
+        "documentDate",
+        "rawText"
       ],
       "findings": []
     },
     {
       "sample": "K02_gst_certificate.png",
       "kind": "gst",
-      "readable": false,
+      "readable": true,
       "fieldsPresent": [
-        "gstin"
+        "businessName",
+        "gstin",
+        "address",
+        "rawText",
+        "gstinReadAdjustment",
+        "tradeName",
+        "registrationDate"
       ],
-      "findings": [
-        "Clearer image or manual review needed",
-        "GST format/checksum not read correctly",
-        "Extracted GST not matched to mock registry"
-      ]
+      "findings": []
     },
     {
       "sample": "K02_signatory_id.png",
@@ -86,7 +99,8 @@
       "fieldsPresent": [
         "businessName",
         "signatoryName",
-        "validTill"
+        "validTill",
+        "rawText"
       ],
       "findings": []
     },
@@ -96,7 +110,12 @@
       "readable": true,
       "fieldsPresent": [
         "businessName",
-        "udyam"
+        "udyam",
+        "city",
+        "state",
+        "rawText",
+        "registrationDate",
+        "majorActivity"
       ],
       "findings": []
     },
@@ -107,7 +126,8 @@
       "fieldsPresent": [
         "businessName",
         "address",
-        "documentDate"
+        "documentDate",
+        "rawText"
       ],
       "findings": []
     },
@@ -118,12 +138,13 @@
       "fieldsPresent": [
         "businessName",
         "gstin",
-        "address"
+        "address",
+        "rawText",
+        "gstinReadAdjustment",
+        "tradeName",
+        "registrationDate"
       ],
-      "findings": [
-        "GST format/checksum not read correctly",
-        "Extracted GST not matched to mock registry"
-      ]
+      "findings": []
     },
     {
       "sample": "K03_signatory_id.png",
@@ -132,7 +153,8 @@
       "fieldsPresent": [
         "businessName",
         "signatoryName",
-        "validTill"
+        "validTill",
+        "rawText"
       ],
       "findings": []
     },
@@ -142,7 +164,12 @@
       "readable": true,
       "fieldsPresent": [
         "businessName",
-        "udyam"
+        "udyam",
+        "city",
+        "state",
+        "rawText",
+        "registrationDate",
+        "majorActivity"
       ],
       "findings": []
     },
@@ -153,7 +180,8 @@
       "fieldsPresent": [
         "businessName",
         "address",
-        "documentDate"
+        "documentDate",
+        "rawText"
       ],
       "findings": []
     },
@@ -161,7 +189,10 @@
       "sample": "K04_gst_certificate.png",
       "kind": "gst",
       "readable": false,
-      "fieldsPresent": [],
+      "fieldsPresent": [
+        "rawText",
+        "gstinReadUncertain"
+      ],
       "findings": [
         "Clearer image or manual review needed",
         "GST format/checksum not read correctly",
@@ -175,7 +206,8 @@
       "fieldsPresent": [
         "businessName",
         "signatoryName",
-        "validTill"
+        "validTill",
+        "rawText"
       ],
       "findings": []
     },
@@ -185,7 +217,12 @@
       "readable": true,
       "fieldsPresent": [
         "businessName",
-        "udyam"
+        "udyam",
+        "city",
+        "state",
+        "rawText",
+        "registrationDate",
+        "majorActivity"
       ],
       "findings": []
     },
@@ -196,7 +233,8 @@
       "fieldsPresent": [
         "businessName",
         "address",
-        "documentDate"
+        "documentDate",
+        "rawText"
       ],
       "findings": []
     },
@@ -207,12 +245,13 @@
       "fieldsPresent": [
         "businessName",
         "gstin",
-        "address"
+        "address",
+        "rawText",
+        "gstinReadAdjustment",
+        "tradeName",
+        "registrationDate"
       ],
-      "findings": [
-        "GST format/checksum not read correctly",
-        "Extracted GST not matched to mock registry"
-      ]
+      "findings": []
     },
     {
       "sample": "K05_signatory_id.png",
@@ -221,7 +260,8 @@
       "fieldsPresent": [
         "businessName",
         "signatoryName",
-        "validTill"
+        "validTill",
+        "rawText"
       ],
       "findings": []
     },
@@ -232,7 +272,8 @@
       "fieldsPresent": [
         "businessName",
         "address",
-        "documentDate"
+        "documentDate",
+        "rawText"
       ],
       "findings": []
     },
@@ -243,7 +284,11 @@
       "fieldsPresent": [
         "businessName",
         "gstin",
-        "address"
+        "address",
+        "rawText",
+        "tradeName",
+        "registrationDate",
+        "gstinReadUncertain"
       ],
       "findings": [
         "GST format/checksum not read correctly",
@@ -257,7 +302,8 @@
       "fieldsPresent": [
         "businessName",
         "signatoryName",
-        "validTill"
+        "validTill",
+        "rawText"
       ],
       "findings": []
     },
@@ -267,7 +313,12 @@
       "readable": true,
       "fieldsPresent": [
         "businessName",
-        "udyam"
+        "udyam",
+        "city",
+        "state",
+        "rawText",
+        "registrationDate",
+        "majorActivity"
       ],
       "findings": []
     },
@@ -278,7 +329,8 @@
       "fieldsPresent": [
         "businessName",
         "address",
-        "documentDate"
+        "documentDate",
+        "rawText"
       ],
       "findings": []
     },
@@ -289,12 +341,13 @@
       "fieldsPresent": [
         "businessName",
         "gstin",
-        "address"
+        "address",
+        "rawText",
+        "gstinReadAdjustment",
+        "tradeName",
+        "registrationDate"
       ],
-      "findings": [
-        "GST format/checksum not read correctly",
-        "Extracted GST not matched to mock registry"
-      ]
+      "findings": []
     },
     {
       "sample": "K07_signatory_id.png",
@@ -303,7 +356,8 @@
       "fieldsPresent": [
         "businessName",
         "signatoryName",
-        "validTill"
+        "validTill",
+        "rawText"
       ],
       "findings": []
     },
@@ -313,7 +367,12 @@
       "readable": true,
       "fieldsPresent": [
         "businessName",
-        "udyam"
+        "udyam",
+        "city",
+        "state",
+        "rawText",
+        "registrationDate",
+        "majorActivity"
       ],
       "findings": []
     },
@@ -324,7 +383,8 @@
       "fieldsPresent": [
         "businessName",
         "address",
-        "documentDate"
+        "documentDate",
+        "rawText"
       ],
       "findings": []
     },
@@ -335,12 +395,13 @@
       "fieldsPresent": [
         "businessName",
         "gstin",
-        "address"
+        "address",
+        "rawText",
+        "gstinReadAdjustment",
+        "tradeName",
+        "registrationDate"
       ],
-      "findings": [
-        "GST format/checksum not read correctly",
-        "Extracted GST not matched to mock registry"
-      ]
+      "findings": []
     },
     {
       "sample": "K08_signatory_id.png",
@@ -349,7 +410,8 @@
       "fieldsPresent": [
         "businessName",
         "signatoryName",
-        "validTill"
+        "validTill",
+        "rawText"
       ],
       "findings": []
     },
@@ -359,7 +421,12 @@
       "readable": true,
       "fieldsPresent": [
         "businessName",
-        "udyam"
+        "udyam",
+        "city",
+        "state",
+        "rawText",
+        "registrationDate",
+        "majorActivity"
       ],
       "findings": []
     },
@@ -370,7 +437,8 @@
       "fieldsPresent": [
         "businessName",
         "address",
-        "documentDate"
+        "documentDate",
+        "rawText"
       ],
       "findings": []
     },
@@ -381,7 +449,10 @@
       "fieldsPresent": [
         "businessName",
         "gstin",
-        "address"
+        "address",
+        "rawText",
+        "tradeName",
+        "registrationDate"
       ],
       "findings": []
     },
@@ -392,7 +463,8 @@
       "fieldsPresent": [
         "businessName",
         "signatoryName",
-        "validTill"
+        "validTill",
+        "rawText"
       ],
       "findings": []
     },
@@ -402,7 +474,12 @@
       "readable": true,
       "fieldsPresent": [
         "businessName",
-        "udyam"
+        "udyam",
+        "city",
+        "state",
+        "rawText",
+        "registrationDate",
+        "majorActivity"
       ],
       "findings": []
     },
@@ -413,7 +490,8 @@
       "fieldsPresent": [
         "businessName",
         "address",
-        "documentDate"
+        "documentDate",
+        "rawText"
       ],
       "findings": []
     },
@@ -424,7 +502,11 @@
       "fieldsPresent": [
         "businessName",
         "gstin",
-        "address"
+        "address",
+        "rawText",
+        "tradeName",
+        "registrationDate",
+        "gstinReadUncertain"
       ],
       "findings": [
         "GST format/checksum not read correctly",
@@ -438,7 +520,8 @@
       "fieldsPresent": [
         "businessName",
         "signatoryName",
-        "validTill"
+        "validTill",
+        "rawText"
       ],
       "findings": []
     },
@@ -448,7 +531,12 @@
       "readable": true,
       "fieldsPresent": [
         "businessName",
-        "udyam"
+        "udyam",
+        "city",
+        "state",
+        "rawText",
+        "registrationDate",
+        "majorActivity"
       ],
       "findings": []
     },
@@ -459,7 +547,8 @@
       "fieldsPresent": [
         "businessName",
         "address",
-        "documentDate"
+        "documentDate",
+        "rawText"
       ],
       "findings": [
         "Address date unreadable, future-dated or older than 90 days"
@@ -472,7 +561,10 @@
       "fieldsPresent": [
         "businessName",
         "gstin",
-        "address"
+        "address",
+        "rawText",
+        "tradeName",
+        "registrationDate"
       ],
       "findings": []
     },
@@ -483,7 +575,8 @@
       "fieldsPresent": [
         "businessName",
         "signatoryName",
-        "validTill"
+        "validTill",
+        "rawText"
       ],
       "findings": []
     },
@@ -493,7 +586,12 @@
       "readable": true,
       "fieldsPresent": [
         "businessName",
-        "udyam"
+        "udyam",
+        "city",
+        "state",
+        "rawText",
+        "registrationDate",
+        "majorActivity"
       ],
       "findings": []
     },
@@ -504,7 +602,8 @@
       "fieldsPresent": [
         "businessName",
         "address",
-        "documentDate"
+        "documentDate",
+        "rawText"
       ],
       "findings": []
     },
@@ -515,7 +614,10 @@
       "fieldsPresent": [
         "businessName",
         "gstin",
-        "address"
+        "address",
+        "rawText",
+        "tradeName",
+        "registrationDate"
       ],
       "findings": []
     },
@@ -526,7 +628,8 @@
       "fieldsPresent": [
         "businessName",
         "signatoryName",
-        "validTill"
+        "validTill",
+        "rawText"
       ],
       "findings": []
     },
@@ -536,7 +639,12 @@
       "readable": true,
       "fieldsPresent": [
         "businessName",
-        "udyam"
+        "udyam",
+        "city",
+        "state",
+        "rawText",
+        "registrationDate",
+        "majorActivity"
       ],
       "findings": []
     }
