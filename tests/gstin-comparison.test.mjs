@@ -6,6 +6,26 @@ import {validateKycFields,mask,privateKyc} from '../src/kyc.mjs';
 import {loadData,profile} from '../src/catalogue.mjs';
 import {gstinComparison,normalizeOcrGstin,safeGstinDiagnostic} from '../src/registration.mjs';
 const data=loadData('YTL_TrackA_Udyam_Digital_Data');
+
+test('K07 real OCR corrects only the extra zero-shaped glyph and retains genuine mismatch checks',async()=>{
+ const row=await readDocument({kind:'gst',dataUrl:'data:image/png;base64,'+readFileSync('YTL_TrackA_Udyam_Digital_Data/kyc_documents/K07_gst_certificate.png').toString('base64')});
+ const expected=[...data.gst.keys()].find(id=>id.startsWith('07')&&id.endsWith('P1ZT'));
+ assert.ok(row.fields.gstin===expected);assert.match(row.fields.gstinReadAdjustment,/review/);
+ const registry=data.gst.get(expected),p=profile({businessName:registry.trade_name,segment:'prof',employees:11,sites:1,cityTier:1,budget:6000,needs:['internet'],gstin:expected});
+ const result=validateKycFields(data,p,{},[row]);
+ assert.ok(!result.findings.some(f=>['registration_number_mismatch','invalid_registration_format'].includes(f.code)));
+ assert.equal(result.documents.find(d=>d.kind==='gst').reviewFields.gstin,mask(expected));
+ const different=[...data.gst.keys()].find(id=>id!==expected);
+ assert.ok(validateKycFields(data,{...p,gstin:different},{},[row]).findings.some(f=>f.code==='registration_number_mismatch'));
+});
+
+test('OCR repair leaves valid readings unchanged and refuses arbitrary extra characters',()=>{
+ const id=[...data.gst.keys()].find(id=>id.startsWith('07')&&id.endsWith('P1ZT'));
+ assert.equal(normalizeOcrGstin(id).adjusted,false);
+ assert.ok(normalizeOcrGstin(id.replace('0','0O')).value===id);
+ assert.equal(normalizeOcrGstin(id+'O').adjusted,false);
+ assert.equal(normalizeOcrGstin(id.replace('0','0X')).adjusted,false);
+});
 test('K03 real OCR uses the checksum-valid printed value for comparison and masked display',async()=>{
  const entered='27XUIXG0767D1ZP';const row=await readDocument({kind:'gst',dataUrl:'data:image/png;base64,'+readFileSync('YTL_TrackA_Udyam_Digital_Data/kyc_documents/K03_gst_certificate.png').toString('base64')});
  assert.ok(row.fields.gstin===entered,'Actual specimen extraction must equal the printed identifier.');

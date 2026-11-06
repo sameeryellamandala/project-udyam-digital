@@ -1,6 +1,7 @@
 import {prepareDocuments} from './pdf.mjs';
 import {extractLocal,parseTextFields} from './ocr.mjs';
 import {extract} from './ai.mjs';
+import {normalizeOcrGstin} from './registration.mjs';
 export const needed={gst:['businessName','gstin'],udyam:['businessName','udyam'],address:['businessName','address','documentDate'],signatory:['signatoryName']};
 export async function readDocument(doc,method='local',config={}){
  const started=performance.now();
@@ -14,6 +15,7 @@ export async function readDocument(doc,method='local',config={}){
    else {const r=(await extractLocal([page]))[0];fields={...textFields,...r.fields};if(Number.isFinite(r.confidence))confidences.push(r.confidence);methods.add('local_ocr');}
    for(const [k,value]of Object.entries(fields||{}))if(k!=='readable'&&value){if(k==='rawText'){merged.rawText=(merged.rawText?merged.rawText+'\n':'')+value;continue;}if(['gstin','udyam'].includes(k)&&merged[k]&&merged[k]!==value)conflicts.push(k);if(!merged[k])merged[k]=value;}
   }
+  if(doc.kind==='gst'&&merged.gstin){const reading=normalizeOcrGstin(merged.gstin);merged.gstin=reading.value;if(reading.adjusted)merged.gstinReadAdjustment='OCR reading corrected for an ambiguous character. One candidate passes the GSTIN structure and checksum. Please review against the document.';}
   const missing=needed[doc.kind].filter(k=>!merged[k]);
   merged.readable=!missing.length&&!conflicts.length;
   return {kind:doc.kind,fields:merged,processingMs:Math.round(performance.now()-started),confidence:confidences.length?Math.round(confidences.reduce((a,b)=>a+b,0)/confidences.length):null,method:[...methods].join('+'),pageCount:pages.length,preview:pages[0]?.dataUrl||doc.dataUrl,missingFields:missing,conflicts,extractionStatus:merged.readable?'extracted':Object.keys(merged).some(k=>!['readable','rawText'].includes(k))?'partially_extracted':'extraction_failed'};

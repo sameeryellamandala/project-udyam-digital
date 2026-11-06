@@ -1,4 +1,6 @@
 import {normalizeOcrGstin} from './registration.mjs';
+import {gstFormat} from './catalogue.mjs';
+import {createCanvas,loadImage} from '@napi-rs/canvas';
 import { createWorker, PSM } from 'tesseract.js';
 import english from '@tesseract.js-data/eng';
 import { AppError } from './catalogue.mjs';
@@ -49,10 +51,11 @@ export function parseLocalFields(kind, data, width, height) {
   const values = {};
   for (let i=0;i<rows.length;i++) {
     const start = rows[i].y - height * .011, end = rows[i+1] ? rows[i+1].y - height * .011 : rows[i].y + height * .065;
-    values[rows[i].key] = lines(tableWords.filter(w=>w.bbox.x0 >= width * .39 && w.bbox.y0 >= start && w.bbox.y0 < end)).map(row=>row.text).join(' ').trim();
+    const valueLines=lines(tableWords.filter(w=>w.bbox.x0 >= width * .39 && w.bbox.y0 >= start && w.bbox.y0 < end));
+    values[rows[i].key] = (['gstin','udyam'].includes(rows[i].key)?valueLines.slice(0,1):valueLines).map(row=>row.text).join(' ').trim();
   }
   const fields = { businessName:'', gstin:'', udyam:'', address:'', documentDate:'', signatoryName:'', validTill:'', city:'', state:'', rawText: data?.text || '', readable:false };
-  if (kind === 'gst') { fields.businessName=values.legal||''; const gstRead=normalizeOcrGstin(values.gstin||'');fields.gstin=gstRead.value;if(gstRead.adjusted)fields.gstinReadAdjustment='OCR O/0 ambiguity corrected in a numeric position; the resulting GSTIN passes its checksum. Please review against the document.'; fields.address=values.address||'';fields.tradeName=values.trade||'';fields.registrationStatus=values.status||'';fields.state=values.state||'';fields.registrationDate=(values.liability||'').match(/\d{4}-\d{2}-\d{2}/)?.[0]||''; fields.readable=!!(values.legal&&values.gstin); }
+  if (kind === 'gst') { fields.businessName=values.legal||''; const gstRead=normalizeOcrGstin(values.gstin||'');fields.gstin=gstRead.value;if(gstRead.adjusted)fields.gstinReadAdjustment='OCR reading corrected for an ambiguous character. One candidate passes the GSTIN structure and checksum. Please review against the document.'; fields.address=values.address||'';fields.tradeName=values.trade||'';fields.registrationStatus=values.status||'';fields.state=values.state||'';fields.registrationDate=(values.liability||'').match(/\d{4}-\d{2}-\d{2}/)?.[0]||''; fields.readable=!!(values.legal&&values.gstin); }
   if (kind === 'udyam') { fields.businessName=values.enterprise||''; fields.udyam=(values.udyam||'').replace(/\s/g,'').toUpperCase(); fields.enterpriseClassification=values.classification||'';fields.registrationDate=values.registration||'';fields.majorActivity=values.activity||''; fields.city=values.city||''; fields.state=values.state||''; fields.readable=!!(values.enterprise&&values.udyam); }
   if (kind === 'address') { fields.businessName=values.billed||''; fields.address=values.address||''; fields.documentDate=(values.date||'').match(/\d{4}-\d{2}-\d{2}/)?.[0]||''; fields.readable=!!(values.billed&&values.address&&values.date); }
   if (kind === 'signatory') {
@@ -77,7 +80,37 @@ export async function extractLocal(documents) {
     for (const doc of documents) {
       const bytes=Buffer.from(doc.dataUrl.split(',')[1],'base64'), {width,height}=imageSize(bytes);
       const { data }=await worker.recognize(bytes, {}, { text:true, blocks:true });
-      const fields=parseLocalFields(doc.kind,data,width,height);
+      let fields=parseLocalFields(doc.kind,data,width,height);
+      // A bounded second pass handles skew and pale watermarks. Original bytes
+      // remain untouched; preprocessing and OCR text live only for this request.
+      if(!fields.readable||(doc.kind==='gst'&&!gstFormat(fields.gstin))){
+        const image=await loadImage(bytes),scale=Math.min(1.5,2200/Math.max(width,height));
+        const canvas=createCanvas(Math.round(width*scale),Math.round(height*scale)),ctx=canvas.getContext('2d');
+        ctx.fillStyle='white';ctx.fillRect(0,0,canvas.width,canvas.height);ctx.drawImage(image,0,0,canvas.width,canvas.height);
+        const pixels=ctx.getImageData(0,0,canvas.width,canvas.height);
+        for(let i=0;i<pixels.data.length;i+=4){const v=Math.min(255,Math.max(0,(Math.min(pixels.data[i],pixels.data[i+1],pixels.data[i+2])-128)*1.3+128));pixels.data[i]=pixels.data[i+1]=pixels.data[i+2]=v;}
+        ctx.putImageData(pixels,0,0);
+        const retry=await worker.recognize(canvas.toBuffer('image/png'),{rotateAuto:true},{text:true,blocks:true});
+        const alternative=parseLocalFields(doc.kind,retry.data,canvas.width,canvas.height);
+        const score=f=>Object.entries(f).filter(([k,v])=>v&&!['rawText','readable','gstinReadAdjustment'].includes(k)).length+(doc.kind==='gst'&&gstFormat(f.gstin)?20:0);
+        if(score(alternative)>score(fields))fields=alternative;
+        if(doc.kind==='gst'&&!gstFormat(fields.gstin)){
+          const blocks=retry.data.blocks||[];
+          const words=blocks.flatMap(b=>b.paragraphs||[]).flatMap(p=>p.lines||[]).flatMap(l=>l.words||[]);
+          const label=words.find(w=>/^GSTIN[:]?$/i.test(w.text));
+          if(label){
+            const left=Math.max(Math.ceil(label.bbox.x1+10),Math.floor(canvas.width*.39));
+            const top=Math.max(0,label.bbox.y0-8),cropHeight=Math.min(canvas.height-top,label.bbox.y1-label.bbox.y0+20);
+            await worker.setParameters({tessedit_pageseg_mode:PSM.SINGLE_LINE,tessedit_char_whitelist:'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'});
+            try{
+              const focused=await worker.recognize(canvas.toBuffer('image/png'),{rotateAuto:true,rectangle:{left,top,width:canvas.width-left,height:cropHeight}},{text:true});
+              const candidate=normalizeOcrGstin(focused.data.text).value;
+              if(gstFormat(candidate)){fields.gstin=candidate;fields.gstinReadAdjustment='GSTIN recovered with a focused second reading. Please review against the document.';}
+            }finally{await worker.setParameters({tessedit_pageseg_mode:PSM.SPARSE_TEXT,tessedit_char_whitelist:''});}
+          }
+          if(!gstFormat(fields.gstin))fields.gstinReadUncertain='The GSTIN could not be read confidently. Upload a clearer image or request review.';
+        }
+      }
       results.push({kind:doc.kind,fields,confidence:Number.isFinite(data.confidence)?data.confidence:null,method:'local_ocr'});
     }
     return results;

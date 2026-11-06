@@ -1,7 +1,7 @@
 # Udyam Digital: product requirements
 
 ## Purpose and source
-Help a small business discover, buy and track a suitable bundle on a phone with minimal human effort. Source: `reference/6ad9d4887d445_airtel_sync/Airtel_SYNC_Case.pdf`, pages 2-6, and the dataset README. Accel Business and all supplied businesses are fictional.
+Help a small business discover, buy and track a suitable bundle on a phone with minimal human effort. Source: Airtel Sync case study (supplied separately, confidential), pages 2-6, and the dataset README. Accel Business and all supplied businesses are fictional.
 
 ## Customers and scope
 Support micro retail/services, professional offices, multi-site businesses and small manufacturers. Pilot professional offices (including clinics), with micro retail as a separate price-sensitive experiment. The aggregate comparison in `reports/lead-analysis.md` supports this initial hypothesis; it does not establish real market causality or clinic-specific conversion. Field sales/partners receive cases needing help; they remain an assisted path.

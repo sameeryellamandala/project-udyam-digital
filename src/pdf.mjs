@@ -10,7 +10,7 @@ async function pdfEngine() {
 }
 
 export async function prepareDocuments(documents) {
-  const prepared = []; 
+  const prepared = [];
   for (const doc of documents) {
     if (!doc.dataUrl.startsWith('data:application/pdf;base64,')) {
       prepared.push(doc);

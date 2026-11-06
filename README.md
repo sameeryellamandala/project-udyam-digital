@@ -29,6 +29,109 @@ Set `GROQ_API_KEY` and `AI_PROVIDER=groq` for live advice. Provider limits apply
 - Prices and rules come from the supplied catalogue. The fixed demo quote uses catalogue minimums, with the original range shown for reference. Actual provider price and availability need confirmation; taxes are excluded.
 - Government lookups, staff workflows and installation/activation are simulations. No payments, real provisioning, email or WhatsApp messages are connected. Staff authentication is shared local authorization, not production role management.
 
+## UML diagrams
+
+### System components
+
+```mermaid
+flowchart LR
+  Customer[Customer browser]
+  Staff[Staff browser]
+  Web[HTML CSS JavaScript<br/>public/]
+  API[Node.js API<br/>server.mjs]
+  Advisor[Groq advisor<br/>LangGraph workflow]
+  Rules[Catalogue and validation rules]
+  PG[(PostgreSQL<br/>conversations and requirements)]
+  SQLite[(SQLite<br/>orders support and encrypted KYC)]
+  OCR[Local OCR and PDF reader]
+  CSV[(Supplied catalogue and mock registries)]
+
+  Customer --> Web
+  Staff --> Web
+  Web --> API
+  API --> Advisor
+  Advisor --> Rules
+  API --> Rules
+  Rules --> CSV
+  API <--> PG
+  API <--> SQLite
+  API --> OCR
+```
+
+### Advisor and quote sequence
+
+```mermaid
+sequenceDiagram
+  actor Customer
+  participant UI as Browser UI
+  participant API as Node.js API
+  participant PG as PostgreSQL
+  participant AI as Groq advisor
+  participant Rules as Catalogue rules
+
+  Customer->>UI: Describe business needs
+  UI->>API: Send message and session ID
+  API->>PG: Load requirements and recent messages
+  PG-->>API: Existing session state
+  API->>AI: Extract new facts and draft a reply
+  AI-->>API: Structured changes and response
+  API->>Rules: Validate products, eligibility and price
+  Rules-->>API: Confirmed options and quote
+  API->>PG: Save merged requirements and conversation
+  API-->>UI: Reply and validated recommendations
+  UI-->>Customer: Show updated needs and package
+```
+
+### Order and verification relationship
+
+```mermaid
+classDiagram
+  class CustomerAccount {
+    +userId
+  }
+  class ConversationSession {
+    +sessionId
+    +requirements
+    +expiresAt
+  }
+  class Quote {
+    +products
+    +monthlyTotal
+    +setupTotal
+  }
+  class Order {
+    +orderId
+    +status
+    +ownerId
+  }
+  class StatusEvent {
+    +previousStatus
+    +newStatus
+    +detail
+    +occurredAt
+  }
+  class KycCase {
+    +caseId
+    +consent
+    +reviewStatus
+  }
+  class KycDocument {
+    +documentKind
+    +version
+    +extractedFields
+  }
+
+  CustomerAccount "1" --> "0..*" ConversationSession : owns
+  ConversationSession "1" --> "0..*" Quote : recommends
+  CustomerAccount "1" --> "0..*" Order : owns
+  Order "1" --> "1" Quote : confirms
+  Order "1" --> "0..*" StatusEvent : records
+  Order "1" --> "0..1" KycCase : verifies
+  KycCase "1" --> "1..*" KycDocument : contains
+```
+
+The diagrams show the current prototype boundaries: PostgreSQL stores advisor sessions, SQLite stores orders and KYC records, and mock registry checks plus staff status updates are simulations.
+
 ## Checks
 
 ```powershell
@@ -52,7 +155,7 @@ Tests use isolated databases. PostgreSQL integration creates and drops only its 
 - [Business case content](docs/business-case.md)
 - [Submission checklist](docs/submission-checklist.md)
 
-`reports/` retains aggregate lead analysis, specimen validation and dataset integrity evidence. The supplied dataset stays unchanged in `YTL_TrackA_Udyam_Digital_Data/`. Original source ZIPs are preserved in `reference/archives/`, and the case PDF is in `reference/6ad9d4887d445_airtel_sync/`. Existing `output/submission/` deliverables are retained, but predate recent account/reply changes and need updating before submission. The latest round calls for one introduction plus seven evaluated slides, a presentation below 20 MB and a demo hyperlink; deadline: 7 November 2026 at 11:59 PM.
+`reports/` retains aggregate lead analysis, specimen validation and dataset integrity evidence. The supplied dataset stays unchanged in `YTL_TrackA_Udyam_Digital_Data/`. Original source archives and the confidential case materials are kept locally and are not included in this repository. Existing `output/submission/` deliverables are retained, but predate recent account/reply changes and need updating before submission. The latest round calls for one introduction plus seven evaluated slides, a presentation below 20 MB and a demo hyperlink; deadline: 7 November 2026 at 11:59 PM.
 
 ## Folder layout
 
@@ -64,7 +167,7 @@ scripts/         Setup, migration, analysis and validation tools
 migrations/      PostgreSQL and SQLite schema migrations
 docs/            Requirements, architecture, API and operating notes
 reports/         Aggregate dataset and specimen evidence
-reference/       Original case material and source archives
+reference/       Local-only case material and source archives
 YTL_TrackA_Udyam_Digital_Data/  Unmodified supplied dataset
 output/          Existing submission deliverables (ignored)
 var/             Private databases and local settings (ignored)

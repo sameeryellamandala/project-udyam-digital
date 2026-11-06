@@ -183,3 +183,10 @@ Validation: regular suite 115 passed, 0 failed, 1 optional PostgreSQL test skipp
 
 ## Location UI simplification — 4 November 2026
 Supersedes the mixed-tier form rollout above: removed location count and branch editor by customer request. One city tier, one site per submitted form, and one camera total restore the simpler checkout. Historical quote rendering and backend location support remain for existing records; no user data is deleted. GitHub publication still awaits confirmation.
+
+
+## OCR reliability update — 6 November 2026
+Identifier rows are bounded to avoid swallowing neighbouring fields. Local reading retries incomplete/invalid extraction using in-memory contrast preparation and automatic rotation, followed by a bounded GSTIN-region reading where a label is found. Position-constrained ambiguous-character corrections require a unique checksum-valid result; no registry/profile values select a repair. Unresolved local GST readings generate a review finding and cannot grant GST eligibility. Independent mock-registry, business-name and date checks remain.
+Validation: 20 focused OCR/KYC/security tests passed, including actual K02/K03/K07/K08 scans and uncertain-reading escalation. All 47 supplied images processed; parser readability improved from 44 to 45 before the final region retry. This is readability coverage, not a manually annotated field-accuracy benchmark. Remaining work: independent per-field transcription annotations for the complete pack and browser visual review of the uncertainty message. No production accuracy guarantee or government verification is implied.
+
+Final regression: npm test completed with 128 passed, 0 failed, 1 optional PostgreSQL test skipped (129 total). Final 47-image run: 45 readable, 2 needing review; 6 contain registry/date/readability review signals. The K06 trade-name regression now expects uncertain scan review rather than asserting the document itself has invalid format. Existing running servers must restart to load the backend changes.
