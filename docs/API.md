@@ -113,4 +113,3 @@ All `/api/sales/*` endpoints require the existing authorized local reviewer/staf
 SQLite add-only tables `support_replies` and `order_kyc_updates` retain message history and correction audits; foreign keys cascade with request/order deletion. Reviewer comments remain encrypted in KYC storage; only redacted messages are returned to the correct customer.
 
 Backend quote responses include `checkoutMonthly` (sum of supplied catalogue minimums), `pricingPolicy: catalogue_minimum_demo_v1` and `pricingNote`. Existing `monthly`/`monthlyMax` retain catalogue bounds. `/api/orders` recalculates prices, ignores client-supplied totals/policies and snapshots the new fields. Existing saved-order snapshots are not migrated or repriced. This is a disclosed fixed demo quote, not a confirmed provider tariff.
-

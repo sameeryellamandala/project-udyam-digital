@@ -270,7 +270,10 @@ export function validateKycFields(data,p,body,rows){
       const certRegistry=data.gst.get(ocrGst);
 
       // Validate OCR GSTIN independently
-      if(!ocrGst){
+      if(fields.gstinReadUncertain){
+        registry.gst.status='reading_uncertain';
+        add(kind,'registration_read_uncertain','GSTIN could not be read confidently from this scan.','Upload a clearer image or request review.','review');
+      } else if(!ocrGst){
         add(kind,'not_extracted','GSTIN could not be extracted from certificate.','Upload a clear certificate.');
       } else if(!ocrGstValidStructure){
         registry.gst.status='invalid_format';
@@ -316,7 +319,7 @@ export function validateKycFields(data,p,body,rows){
       }
 
       // Compare profile GSTIN with OCR GSTIN if both provided
-      if(p.gstin&&ocrGst&&!gstinComparison(p.gstin,ocrGst).matches){
+      if(!fields.gstinReadUncertain&&p.gstin&&ocrGst&&!gstinComparison(p.gstin,ocrGst).matches){
         add(kind,'registration_number_mismatch','Certificate GSTIN differs from the entered profile GSTIN.','Correct the entered GSTIN or replace the certificate.');
       }
     }
@@ -496,7 +499,7 @@ export function validateKycFields(data,p,body,rows){
    note:'Mock registry and field matches do not prove document authenticity. Assisted review is a simulated local workflow, not government authentication.'
  };
 
- const eligibilityGstCert=extractedGst&&data.gst.get(extractedGst)?.status==='Active'&&!findings.some(f=>f.kind==='gst'&&f.severity==='error')?extractedGst:'';
+ const eligibilityGstCert=!field('gst')?.gstinReadUncertain&&extractedGst&&data.gst.get(extractedGst)?.status==='Active'&&!findings.some(f=>f.kind==='gst'&&f.severity==='error')?extractedGst:'';
  const eligibilityGstProfile=p.gstin&&data.gst.get(p.gstin)?.status==='Active'&&!rows.some(r=>r.kind==='gst')?p.gstin:'';
  const eligibilityUdyamCert=extractedUdyam&&data.udyam.get(extractedUdyam)&&!findings.some(f=>f.kind==='udyam'&&f.severity==='error')?extractedUdyam:'';
  const eligibilityUdyamProfile=p.udyam&&data.udyam.get(p.udyam)&&!rows.some(r=>r.kind==='udyam')?p.udyam:'';

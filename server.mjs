@@ -12,12 +12,12 @@ import { readFileSync, existsSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { randomUUID } from 'node:crypto';
-import { AppError, csv, loadData, profile, recommend, quote, quoteItems, text } from './src/catalogue.mjs';
+import { AppError, csv, loadData, profile, recommend, quote, quoteItems, text, gstFormat } from './src/catalogue.mjs';
 import { createStore, hash } from './src/store.mjs';
 import { analyzeLeads, buildLeadQueue } from './src/analytics.mjs';
 import { advisor } from './src/ai.mjs';
 import { aiConfig } from './src/ai-config.mjs';
-import { verify, REFERENCE_DATE,privateKyc,validateDocuments } from './src/kyc.mjs';
+import { verify, REFERENCE_DATE,privateKyc,validateDocuments,same,mask } from './src/kyc.mjs';
 
 const ROOT = dirname(fileURLToPath(import.meta.url));
 const assets = new Map([['/customer-auth.js',['public/customer-auth.js','text/javascript; charset=utf-8']],['/order-navigation.mjs',['src/order-navigation.mjs','text/javascript; charset=utf-8']],['/kyc-review.html',['public/kyc-review.html','text/html; charset=utf-8']],['/kyc-review.js',['public/kyc-review.js','text/javascript; charset=utf-8']],['/staff.html',['public/staff.html','text/html; charset=utf-8']],['/staff.js',['public/staff.js','text/javascript; charset=utf-8']],['/locale.js', ['public/locale.js', 'text/javascript; charset=utf-8']],['/', ['public/index.html', 'text/html; charset=utf-8']], ['/index.html', ['public/index.html', 'text/html; charset=utf-8']], ['/app.js', ['public/app.js', 'text/javascript; charset=utf-8']], ['/style.css', ['public/style.css', 'text/css; charset=utf-8']], ['/sales.html',['public/sales.html','text/html; charset=utf-8']], ['/sales.js',['public/sales.js','text/javascript; charset=utf-8']], ['/sales.css',['public/sales.css','text/css; charset=utf-8']]]);
@@ -112,7 +112,7 @@ export function createApp(options = {}) {
       const isReviewer=()=>!!kyc?.authorized(reviewerCookie);
       const requireReviewer=()=>{if(!isReviewer())throw new AppError('Reviewer sign-in is required.',401,'REVIEWER_REQUIRED');};
       if(req.method==='GET'&&path==='/api/staff/session'){send(200,{signedIn:isReviewer()});return;}
-      const customerPath=path.startsWith('/api/orders')||path.startsWith('/api/sessions')||['/api/recommend','/api/quote','/api/advisor','/api/verify','/api/notifications','/api/notifications/read'].includes(path)||(path.startsWith('/api/kyc/')&&!path.startsWith('/api/kyc/reviewer/')&&!isReviewer());
+      const customerPath=path.startsWith('/api/orders')||path.startsWith('/api/sessions')||['/api/registration-check','/api/recommend','/api/quote','/api/advisor','/api/verify','/api/notifications','/api/notifications/read'].includes(path)||(path.startsWith('/api/kyc/')&&!path.startsWith('/api/kyc/reviewer/')&&!isReviewer());
       if(requireCustomerAuth&&customerPath&&!identity)throw new AppError('Sign in to access your business setup and place orders.',401,'AUTH_REQUIRED');
       if(path.startsWith('/api/sales/')&&!isReviewer())throw new AppError('Staff sign-in is required.',401,'STAFF_REQUIRED');
       if(path.startsWith('/api/kyc/')){
@@ -301,12 +301,23 @@ export function createApp(options = {}) {
         const reply=store.replySupport(id,message,input.status);if(!reply)throw new AppError('Help request not found.',404);
         send(201,{reply});return;
       }
-      if (req.method !== 'POST' || !['/api/recommend', '/api/quote', '/api/advisor', '/api/verify', '/api/orders'].includes(path)) throw new AppError('Endpoint not found.', 404, 'NOT_FOUND');
+      if (req.method !== 'POST' || !['/api/registration-check','/api/recommend', '/api/quote', '/api/advisor', '/api/verify', '/api/orders'].includes(path)) throw new AppError('Endpoint not found.', 404, 'NOT_FOUND');
       const input = await body(req, path === '/api/verify' ? 12 * 1024 * 1024 : 64 * 1024);
       let pendingResponse;
       const execute=async(business,journey=null)=>{
       const send=(status,value)=>{pendingResponse={status,value};};
       if ((business.gstin || business.udyam) && input.consent !== true) throw new AppError('Consent is required before checking business identifiers.', 403, 'CONSENT_REQUIRED');
+      if(path==='/api/registration-check'){
+        if(input.consent!==true)throw new AppError('Consent is required before checking business identifiers.',403,'CONSENT_REQUIRED');
+        const registration=data.gst.get(business.gstin);
+        const status=!gstFormat(business.gstin)?'invalid_format':!registration?'not_found':registration.status!=='Active'?'inactive':![registration.legal_name,registration.trade_name].some(name=>same(name,business.businessName))?'business_name_mismatch':'matched';
+        const messages={invalid_format:'Enter a valid 15-character GSTIN with a correct checksum.',not_found:'GSTIN was not found in the supplied mock registry. Check the number.',inactive:'The supplied mock registry does not show this GST registration as active.',business_name_mismatch:'The business name must match the legal or trade name in the supplied mock registry.',matched:'Active registration and business name matched the supplied mock registry. Certificate checks are still required during KYC.'};
+        // A preliminary lookup never creates a verification ID or saves an identifier
+        // into conversational memory, and cannot bypass the document consent flow.
+        const recommendation=status==='matched'?(journey?journeyRecommendation(journey.state,data,business):recommend(business,data)):null;
+        const {profile:privateProfile,...publicRecommendation}=recommendation||{};
+        send(200,{registration:{status,maskedGstin:mask(business.gstin),message:messages[status]},recommendation:recommendation?publicRecommendation:null});return;
+      }
       let checkedForRequest;
       if(input.verificationId&&path!=='/api/verify'){
         checkedForRequest=store.getVerification(session.hash,business,input.verificationId);

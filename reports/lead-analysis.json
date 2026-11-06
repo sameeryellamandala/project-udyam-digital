@@ -1,0 +1,146 @@
+{
+  "source": "smb_leads.csv (synthetic, Apr-Jun 2026)",
+  "overall": {
+    "leads": 5000,
+    "activated": 368,
+    "conversionPct": 7.36,
+    "averageActivationDays": 17.62,
+    "medianMonthlyBundle": 6900,
+    "acquisitionSpend": 5539640,
+    "blendedCostPerActivation": 15053.37,
+    "churnObserved": 368,
+    "churnPct": 15.22
+  },
+  "segments": {
+    "Micro retail & services": {
+      "leads": 2709,
+      "activated": 110,
+      "conversionPct": 4.06,
+      "averageActivationDays": 16.65,
+      "medianMonthlyBundle": 2470,
+      "acquisitionSpend": 2200780,
+      "blendedCostPerActivation": 20007.09,
+      "churnObserved": 110,
+      "churnPct": 22.73
+    },
+    "Professional offices": {
+      "leads": 1247,
+      "activated": 138,
+      "conversionPct": 11.07,
+      "averageActivationDays": 16.92,
+      "medianMonthlyBundle": 6575,
+      "acquisitionSpend": 1475870,
+      "blendedCostPerActivation": 10694.71,
+      "churnObserved": 138,
+      "churnPct": 13.77
+    },
+    "Small manufacturers": {
+      "leads": 289,
+      "activated": 37,
+      "conversionPct": 12.8,
+      "averageActivationDays": 20.51,
+      "medianMonthlyBundle": 15910,
+      "acquisitionSpend": 567000,
+      "blendedCostPerActivation": 15324.32,
+      "churnObserved": 37,
+      "churnPct": 8.11
+    },
+    "Small multi-site businesses": {
+      "leads": 755,
+      "activated": 83,
+      "conversionPct": 10.99,
+      "averageActivationDays": 18.77,
+      "medianMonthlyBundle": 28080,
+      "acquisitionSpend": 1295990,
+      "blendedCostPerActivation": 15614.34,
+      "churnObserved": 83,
+      "churnPct": 10.84
+    }
+  },
+  "funnel": [
+    {
+      "stage": "Lead",
+      "count": 5000
+    },
+    {
+      "stage": "Contacted",
+      "count": 3406
+    },
+    {
+      "stage": "Needs assessed",
+      "count": 1974
+    },
+    {
+      "stage": "Quote accepted",
+      "count": 861
+    },
+    {
+      "stage": "KYC complete",
+      "count": 588
+    },
+    {
+      "stage": "Activated",
+      "count": 368
+    }
+  ],
+  "topDropReasons": [
+    {
+      "reason": "Unreachable after 3 attempts",
+      "count": 805
+    },
+    {
+      "reason": "Owner had no time for a visit",
+      "count": 531
+    },
+    {
+      "reason": "Not interested on first call",
+      "count": 470
+    },
+    {
+      "reason": "Price too high",
+      "count": 414
+    },
+    {
+      "reason": "Locked in with current provider",
+      "count": 325
+    },
+    {
+      "reason": "Wrong or invalid number",
+      "count": 319
+    },
+    {
+      "reason": "Visit not scheduled by sales",
+      "count": 296
+    },
+    {
+      "reason": "Only wanted a mobile plan",
+      "count": 280
+    }
+  ],
+  "gstGroups": {
+    "registered": {
+      "leads": 3534,
+      "activated": 338,
+      "conversionPct": 9.56,
+      "averageActivationDays": 17.44,
+      "medianMonthlyBundle": 7230,
+      "acquisitionSpend": 4287810,
+      "blendedCostPerActivation": 12685.83,
+      "churnObserved": 338,
+      "churnPct": 14.5
+    },
+    "unregistered": {
+      "leads": 1466,
+      "activated": 30,
+      "conversionPct": 2.05,
+      "averageActivationDays": 19.6,
+      "medianMonthlyBundle": 3015,
+      "acquisitionSpend": 1251830,
+      "blendedCostPerActivation": 41727.67,
+      "churnObserved": 30,
+      "churnPct": 23.33
+    }
+  },
+  "averageFollowups": 3.01,
+  "nps": -25.27
+}

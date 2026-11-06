@@ -1,0 +1,1126 @@
+{
+  "referenceDate": "2026-07-15",
+  "scope": "All supplied images processed. Applicant grouping uses fixture names only; extraction and validation never use applicant IDs or filenames. Expected contact/business details use matching supplied lead/registry records where available. No judges-only answer key was provided. Registry matches do not prove authenticity.",
+  "summary": {
+    "documents": 47,
+    "applicants": 12,
+    "extracted": 44,
+    "partiallyExtracted": 2,
+    "failed": 1,
+    "independentLeadMatches": 12,
+    "outcomes": {
+      "action_required": 12
+    }
+  },
+  "documents": [
+    {
+      "sample": "K01_address_proof.png",
+      "kind": "address",
+      "extractionStatus": "extracted",
+      "confidence": 94,
+      "fieldsPresent": [
+        "businessName",
+        "address",
+        "documentDate",
+        "rawText"
+      ],
+      "missingFields": []
+    },
+    {
+      "sample": "K01_gst_certificate.png",
+      "kind": "gst",
+      "extractionStatus": "extracted",
+      "confidence": 93,
+      "fieldsPresent": [
+        "businessName",
+        "gstin",
+        "address",
+        "rawText",
+        "tradeName",
+        "registrationDate"
+      ],
+      "missingFields": []
+    },
+    {
+      "sample": "K01_signatory_id.png",
+      "kind": "signatory",
+      "extractionStatus": "extracted",
+      "confidence": 90,
+      "fieldsPresent": [
+        "businessName",
+        "signatoryName",
+        "validTill",
+        "rawText"
+      ],
+      "missingFields": []
+    },
+    {
+      "sample": "K01_udyam_certificate.png",
+      "kind": "udyam",
+      "extractionStatus": "partially_extracted",
+      "confidence": 94,
+      "fieldsPresent": [
+        "businessName",
+        "city",
+        "state",
+        "rawText",
+        "registrationDate",
+        "majorActivity"
+      ],
+      "missingFields": [
+        "udyam"
+      ]
+    },
+    {
+      "sample": "K02_address_proof.png",
+      "kind": "address",
+      "extractionStatus": "extracted",
+      "confidence": 95,
+      "fieldsPresent": [
+        "businessName",
+        "address",
+        "documentDate",
+        "rawText"
+      ],
+      "missingFields": []
+    },
+    {
+      "sample": "K02_gst_certificate.png",
+      "kind": "gst",
+      "extractionStatus": "partially_extracted",
+      "confidence": 69,
+      "fieldsPresent": [
+        "gstin",
+        "rawText"
+      ],
+      "missingFields": [
+        "businessName"
+      ]
+    },
+    {
+      "sample": "K02_signatory_id.png",
+      "kind": "signatory",
+      "extractionStatus": "extracted",
+      "confidence": 90,
+      "fieldsPresent": [
+        "businessName",
+        "signatoryName",
+        "validTill",
+        "rawText"
+      ],
+      "missingFields": []
+    },
+    {
+      "sample": "K02_udyam_certificate.png",
+      "kind": "udyam",
+      "extractionStatus": "extracted",
+      "confidence": 94,
+      "fieldsPresent": [
+        "businessName",
+        "udyam",
+        "city",
+        "state",
+        "rawText",
+        "registrationDate",
+        "majorActivity"
+      ],
+      "missingFields": []
+    },
+    {
+      "sample": "K03_address_proof.png",
+      "kind": "address",
+      "extractionStatus": "extracted",
+      "confidence": 94,
+      "fieldsPresent": [
+        "businessName",
+        "address",
+        "documentDate",
+        "rawText"
+      ],
+      "missingFields": []
+    },
+    {
+      "sample": "K03_gst_certificate.png",
+      "kind": "gst",
+      "extractionStatus": "extracted",
+      "confidence": 94,
+      "fieldsPresent": [
+        "businessName",
+        "gstin",
+        "address",
+        "rawText",
+        "gstinReadAdjustment",
+        "tradeName",
+        "registrationDate"
+      ],
+      "missingFields": []
+    },
+    {
+      "sample": "K03_signatory_id.png",
+      "kind": "signatory",
+      "extractionStatus": "extracted",
+      "confidence": 89,
+      "fieldsPresent": [
+        "businessName",
+        "signatoryName",
+        "validTill",
+        "rawText"
+      ],
+      "missingFields": []
+    },
+    {
+      "sample": "K03_udyam_certificate.png",
+      "kind": "udyam",
+      "extractionStatus": "extracted",
+      "confidence": 94,
+      "fieldsPresent": [
+        "businessName",
+        "udyam",
+        "city",
+        "state",
+        "rawText",
+        "registrationDate",
+        "majorActivity"
+      ],
+      "missingFields": []
+    },
+    {
+      "sample": "K04_address_proof.png",
+      "kind": "address",
+      "extractionStatus": "extracted",
+      "confidence": 94,
+      "fieldsPresent": [
+        "businessName",
+        "address",
+        "documentDate",
+        "rawText"
+      ],
+      "missingFields": []
+    },
+    {
+      "sample": "K04_gst_certificate.png",
+      "kind": "gst",
+      "extractionStatus": "extraction_failed",
+      "confidence": 32,
+      "fieldsPresent": [
+        "rawText"
+      ],
+      "missingFields": [
+        "businessName",
+        "gstin"
+      ]
+    },
+    {
+      "sample": "K04_signatory_id.png",
+      "kind": "signatory",
+      "extractionStatus": "extracted",
+      "confidence": 90,
+      "fieldsPresent": [
+        "businessName",
+        "signatoryName",
+        "validTill",
+        "rawText"
+      ],
+      "missingFields": []
+    },
+    {
+      "sample": "K04_udyam_certificate.png",
+      "kind": "udyam",
+      "extractionStatus": "extracted",
+      "confidence": 94,
+      "fieldsPresent": [
+        "businessName",
+        "udyam",
+        "city",
+        "state",
+        "rawText",
+        "registrationDate",
+        "majorActivity"
+      ],
+      "missingFields": []
+    },
+    {
+      "sample": "K05_address_proof.png",
+      "kind": "address",
+      "extractionStatus": "extracted",
+      "confidence": 95,
+      "fieldsPresent": [
+        "businessName",
+        "address",
+        "documentDate",
+        "rawText"
+      ],
+      "missingFields": []
+    },
+    {
+      "sample": "K05_gst_certificate.png",
+      "kind": "gst",
+      "extractionStatus": "extracted",
+      "confidence": 94,
+      "fieldsPresent": [
+        "businessName",
+        "gstin",
+        "address",
+        "rawText",
+        "tradeName",
+        "registrationDate"
+      ],
+      "missingFields": []
+    },
+    {
+      "sample": "K05_signatory_id.png",
+      "kind": "signatory",
+      "extractionStatus": "extracted",
+      "confidence": 90,
+      "fieldsPresent": [
+        "businessName",
+        "signatoryName",
+        "validTill",
+        "rawText"
+      ],
+      "missingFields": []
+    },
+    {
+      "sample": "K06_address_proof.png",
+      "kind": "address",
+      "extractionStatus": "extracted",
+      "confidence": 95,
+      "fieldsPresent": [
+        "businessName",
+        "address",
+        "documentDate",
+        "rawText"
+      ],
+      "missingFields": []
+    },
+    {
+      "sample": "K06_gst_certificate.png",
+      "kind": "gst",
+      "extractionStatus": "extracted",
+      "confidence": 94,
+      "fieldsPresent": [
+        "businessName",
+        "gstin",
+        "address",
+        "rawText",
+        "tradeName",
+        "registrationDate"
+      ],
+      "missingFields": []
+    },
+    {
+      "sample": "K06_signatory_id.png",
+      "kind": "signatory",
+      "extractionStatus": "extracted",
+      "confidence": 90,
+      "fieldsPresent": [
+        "businessName",
+        "signatoryName",
+        "validTill",
+        "rawText"
+      ],
+      "missingFields": []
+    },
+    {
+      "sample": "K06_udyam_certificate.png",
+      "kind": "udyam",
+      "extractionStatus": "extracted",
+      "confidence": 94,
+      "fieldsPresent": [
+        "businessName",
+        "udyam",
+        "city",
+        "state",
+        "rawText",
+        "registrationDate",
+        "majorActivity"
+      ],
+      "missingFields": []
+    },
+    {
+      "sample": "K07_address_proof.png",
+      "kind": "address",
+      "extractionStatus": "extracted",
+      "confidence": 95,
+      "fieldsPresent": [
+        "businessName",
+        "address",
+        "documentDate",
+        "rawText"
+      ],
+      "missingFields": []
+    },
+    {
+      "sample": "K07_gst_certificate.png",
+      "kind": "gst",
+      "extractionStatus": "extracted",
+      "confidence": 94,
+      "fieldsPresent": [
+        "businessName",
+        "gstin",
+        "address",
+        "rawText",
+        "tradeName",
+        "registrationDate"
+      ],
+      "missingFields": []
+    },
+    {
+      "sample": "K07_signatory_id.png",
+      "kind": "signatory",
+      "extractionStatus": "extracted",
+      "confidence": 90,
+      "fieldsPresent": [
+        "businessName",
+        "signatoryName",
+        "validTill",
+        "rawText"
+      ],
+      "missingFields": []
+    },
+    {
+      "sample": "K07_udyam_certificate.png",
+      "kind": "udyam",
+      "extractionStatus": "extracted",
+      "confidence": 94,
+      "fieldsPresent": [
+        "businessName",
+        "udyam",
+        "city",
+        "state",
+        "rawText",
+        "registrationDate",
+        "majorActivity"
+      ],
+      "missingFields": []
+    },
+    {
+      "sample": "K08_address_proof.png",
+      "kind": "address",
+      "extractionStatus": "extracted",
+      "confidence": 95,
+      "fieldsPresent": [
+        "businessName",
+        "address",
+        "documentDate",
+        "rawText"
+      ],
+      "missingFields": []
+    },
+    {
+      "sample": "K08_gst_certificate.png",
+      "kind": "gst",
+      "extractionStatus": "extracted",
+      "confidence": 94,
+      "fieldsPresent": [
+        "businessName",
+        "gstin",
+        "address",
+        "rawText",
+        "tradeName",
+        "registrationDate"
+      ],
+      "missingFields": []
+    },
+    {
+      "sample": "K08_signatory_id.png",
+      "kind": "signatory",
+      "extractionStatus": "extracted",
+      "confidence": 90,
+      "fieldsPresent": [
+        "businessName",
+        "signatoryName",
+        "validTill",
+        "rawText"
+      ],
+      "missingFields": []
+    },
+    {
+      "sample": "K08_udyam_certificate.png",
+      "kind": "udyam",
+      "extractionStatus": "extracted",
+      "confidence": 94,
+      "fieldsPresent": [
+        "businessName",
+        "udyam",
+        "city",
+        "state",
+        "rawText",
+        "registrationDate",
+        "majorActivity"
+      ],
+      "missingFields": []
+    },
+    {
+      "sample": "K09_address_proof.png",
+      "kind": "address",
+      "extractionStatus": "extracted",
+      "confidence": 95,
+      "fieldsPresent": [
+        "businessName",
+        "address",
+        "documentDate",
+        "rawText"
+      ],
+      "missingFields": []
+    },
+    {
+      "sample": "K09_gst_certificate.png",
+      "kind": "gst",
+      "extractionStatus": "extracted",
+      "confidence": 94,
+      "fieldsPresent": [
+        "businessName",
+        "gstin",
+        "address",
+        "rawText",
+        "tradeName",
+        "registrationDate"
+      ],
+      "missingFields": []
+    },
+    {
+      "sample": "K09_signatory_id.png",
+      "kind": "signatory",
+      "extractionStatus": "extracted",
+      "confidence": 90,
+      "fieldsPresent": [
+        "businessName",
+        "signatoryName",
+        "validTill",
+        "rawText"
+      ],
+      "missingFields": []
+    },
+    {
+      "sample": "K09_udyam_certificate.png",
+      "kind": "udyam",
+      "extractionStatus": "extracted",
+      "confidence": 94,
+      "fieldsPresent": [
+        "businessName",
+        "udyam",
+        "city",
+        "state",
+        "rawText",
+        "registrationDate",
+        "majorActivity"
+      ],
+      "missingFields": []
+    },
+    {
+      "sample": "K10_address_proof.png",
+      "kind": "address",
+      "extractionStatus": "extracted",
+      "confidence": 95,
+      "fieldsPresent": [
+        "businessName",
+        "address",
+        "documentDate",
+        "rawText"
+      ],
+      "missingFields": []
+    },
+    {
+      "sample": "K10_gst_certificate.png",
+      "kind": "gst",
+      "extractionStatus": "extracted",
+      "confidence": 94,
+      "fieldsPresent": [
+        "businessName",
+        "gstin",
+        "address",
+        "rawText",
+        "tradeName",
+        "registrationDate"
+      ],
+      "missingFields": []
+    },
+    {
+      "sample": "K10_signatory_id.png",
+      "kind": "signatory",
+      "extractionStatus": "extracted",
+      "confidence": 89,
+      "fieldsPresent": [
+        "businessName",
+        "signatoryName",
+        "validTill",
+        "rawText"
+      ],
+      "missingFields": []
+    },
+    {
+      "sample": "K10_udyam_certificate.png",
+      "kind": "udyam",
+      "extractionStatus": "extracted",
+      "confidence": 94,
+      "fieldsPresent": [
+        "businessName",
+        "udyam",
+        "city",
+        "state",
+        "rawText",
+        "registrationDate",
+        "majorActivity"
+      ],
+      "missingFields": []
+    },
+    {
+      "sample": "K11_address_proof.png",
+      "kind": "address",
+      "extractionStatus": "extracted",
+      "confidence": 95,
+      "fieldsPresent": [
+        "businessName",
+        "address",
+        "documentDate",
+        "rawText"
+      ],
+      "missingFields": []
+    },
+    {
+      "sample": "K11_gst_certificate.png",
+      "kind": "gst",
+      "extractionStatus": "extracted",
+      "confidence": 94,
+      "fieldsPresent": [
+        "businessName",
+        "gstin",
+        "address",
+        "rawText",
+        "tradeName",
+        "registrationDate"
+      ],
+      "missingFields": []
+    },
+    {
+      "sample": "K11_signatory_id.png",
+      "kind": "signatory",
+      "extractionStatus": "extracted",
+      "confidence": 90,
+      "fieldsPresent": [
+        "businessName",
+        "signatoryName",
+        "validTill",
+        "rawText"
+      ],
+      "missingFields": []
+    },
+    {
+      "sample": "K11_udyam_certificate.png",
+      "kind": "udyam",
+      "extractionStatus": "extracted",
+      "confidence": 94,
+      "fieldsPresent": [
+        "businessName",
+        "udyam",
+        "city",
+        "state",
+        "rawText",
+        "registrationDate",
+        "majorActivity"
+      ],
+      "missingFields": []
+    },
+    {
+      "sample": "K12_address_proof.png",
+      "kind": "address",
+      "extractionStatus": "extracted",
+      "confidence": 94,
+      "fieldsPresent": [
+        "businessName",
+        "address",
+        "documentDate",
+        "rawText"
+      ],
+      "missingFields": []
+    },
+    {
+      "sample": "K12_gst_certificate.png",
+      "kind": "gst",
+      "extractionStatus": "extracted",
+      "confidence": 94,
+      "fieldsPresent": [
+        "businessName",
+        "gstin",
+        "address",
+        "rawText",
+        "tradeName",
+        "registrationDate"
+      ],
+      "missingFields": []
+    },
+    {
+      "sample": "K12_signatory_id.png",
+      "kind": "signatory",
+      "extractionStatus": "extracted",
+      "confidence": 90,
+      "fieldsPresent": [
+        "businessName",
+        "signatoryName",
+        "validTill",
+        "rawText"
+      ],
+      "missingFields": []
+    },
+    {
+      "sample": "K12_udyam_certificate.png",
+      "kind": "udyam",
+      "extractionStatus": "extracted",
+      "confidence": 94,
+      "fieldsPresent": [
+        "businessName",
+        "udyam",
+        "city",
+        "state",
+        "rawText",
+        "registrationDate",
+        "majorActivity"
+      ],
+      "missingFields": []
+    }
+  ],
+  "applicants": [
+    {
+      "applicant": "K01",
+      "independentLeadMatched": true,
+      "overallStatus": "action_required",
+      "findings": [
+        "registration_inactive",
+        "not_extracted"
+      ],
+      "documents": [
+        {
+          "kind": "gst",
+          "status": "cancelled_registration",
+          "codes": [
+            "registration_inactive"
+          ]
+        },
+        {
+          "kind": "udyam",
+          "status": "mismatch_detected",
+          "codes": [
+            "not_extracted",
+            "not_extracted"
+          ]
+        },
+        {
+          "kind": "address",
+          "status": "matched",
+          "codes": []
+        },
+        {
+          "kind": "signatory",
+          "status": "matched",
+          "codes": []
+        }
+      ]
+    },
+    {
+      "applicant": "K02",
+      "independentLeadMatched": true,
+      "overallStatus": "action_required",
+      "findings": [
+        "not_extracted",
+        "invalid_registration_format",
+        "registration_number_mismatch",
+        "udyam_date_mismatch"
+      ],
+      "documents": [
+        {
+          "kind": "gst",
+          "status": "invalid_registration_format",
+          "codes": [
+            "not_extracted",
+            "invalid_registration_format",
+            "not_extracted",
+            "registration_number_mismatch"
+          ]
+        },
+        {
+          "kind": "udyam",
+          "status": "mismatch_detected",
+          "codes": [
+            "udyam_date_mismatch"
+          ]
+        },
+        {
+          "kind": "address",
+          "status": "matched",
+          "codes": []
+        },
+        {
+          "kind": "signatory",
+          "status": "matched",
+          "codes": []
+        }
+      ]
+    },
+    {
+      "applicant": "K03",
+      "independentLeadMatched": true,
+      "overallStatus": "action_required",
+      "findings": [
+        "udyam_date_mismatch"
+      ],
+      "documents": [
+        {
+          "kind": "gst",
+          "status": "matched",
+          "codes": []
+        },
+        {
+          "kind": "udyam",
+          "status": "mismatch_detected",
+          "codes": [
+            "udyam_date_mismatch"
+          ]
+        },
+        {
+          "kind": "address",
+          "status": "matched",
+          "codes": []
+        },
+        {
+          "kind": "signatory",
+          "status": "matched",
+          "codes": []
+        }
+      ]
+    },
+    {
+      "applicant": "K04",
+      "independentLeadMatched": true,
+      "overallStatus": "action_required",
+      "findings": [
+        "extraction_failed",
+        "udyam_date_mismatch"
+      ],
+      "documents": [
+        {
+          "kind": "gst",
+          "status": "extraction_failed",
+          "codes": [
+            "extraction_failed"
+          ]
+        },
+        {
+          "kind": "udyam",
+          "status": "mismatch_detected",
+          "codes": [
+            "udyam_date_mismatch"
+          ]
+        },
+        {
+          "kind": "address",
+          "status": "matched",
+          "codes": []
+        },
+        {
+          "kind": "signatory",
+          "status": "matched",
+          "codes": []
+        }
+      ]
+    },
+    {
+      "applicant": "K05",
+      "independentLeadMatched": true,
+      "overallStatus": "action_required",
+      "findings": [
+        "invalid_registration_format",
+        "registration_number_mismatch",
+        "address_mismatch",
+        "name_mismatch"
+      ],
+      "documents": [
+        {
+          "kind": "gst",
+          "status": "invalid_registration_format",
+          "codes": [
+            "invalid_registration_format",
+            "registration_number_mismatch"
+          ]
+        },
+        {
+          "kind": "udyam",
+          "status": "not_required",
+          "codes": []
+        },
+        {
+          "kind": "address",
+          "status": "mismatch_detected",
+          "codes": [
+            "address_mismatch"
+          ]
+        },
+        {
+          "kind": "signatory",
+          "status": "mismatch_detected",
+          "codes": [
+            "name_mismatch"
+          ]
+        }
+      ]
+    },
+    {
+      "applicant": "K06",
+      "independentLeadMatched": true,
+      "overallStatus": "action_required",
+      "findings": [
+        "invalid_registration_format",
+        "registration_number_mismatch",
+        "udyam_activity_mismatch",
+        "udyam_date_mismatch"
+      ],
+      "documents": [
+        {
+          "kind": "gst",
+          "status": "invalid_registration_format",
+          "codes": [
+            "invalid_registration_format",
+            "registration_number_mismatch"
+          ]
+        },
+        {
+          "kind": "udyam",
+          "status": "mismatch_detected",
+          "codes": [
+            "udyam_activity_mismatch",
+            "udyam_date_mismatch"
+          ]
+        },
+        {
+          "kind": "address",
+          "status": "matched",
+          "codes": []
+        },
+        {
+          "kind": "signatory",
+          "status": "matched",
+          "codes": []
+        }
+      ]
+    },
+    {
+      "applicant": "K07",
+      "independentLeadMatched": true,
+      "overallStatus": "action_required",
+      "findings": [
+        "invalid_registration_format",
+        "registration_number_mismatch",
+        "udyam_date_mismatch"
+      ],
+      "documents": [
+        {
+          "kind": "gst",
+          "status": "invalid_registration_format",
+          "codes": [
+            "invalid_registration_format",
+            "registration_number_mismatch"
+          ]
+        },
+        {
+          "kind": "udyam",
+          "status": "mismatch_detected",
+          "codes": [
+            "udyam_date_mismatch"
+          ]
+        },
+        {
+          "kind": "address",
+          "status": "matched",
+          "codes": []
+        },
+        {
+          "kind": "signatory",
+          "status": "matched",
+          "codes": []
+        }
+      ]
+    },
+    {
+      "applicant": "K08",
+      "independentLeadMatched": true,
+      "overallStatus": "action_required",
+      "findings": [
+        "invalid_registration_format",
+        "registration_number_mismatch",
+        "udyam_date_mismatch"
+      ],
+      "documents": [
+        {
+          "kind": "gst",
+          "status": "invalid_registration_format",
+          "codes": [
+            "invalid_registration_format",
+            "registration_number_mismatch"
+          ]
+        },
+        {
+          "kind": "udyam",
+          "status": "mismatch_detected",
+          "codes": [
+            "udyam_date_mismatch"
+          ]
+        },
+        {
+          "kind": "address",
+          "status": "matched",
+          "codes": []
+        },
+        {
+          "kind": "signatory",
+          "status": "matched",
+          "codes": []
+        }
+      ]
+    },
+    {
+      "applicant": "K09",
+      "independentLeadMatched": true,
+      "overallStatus": "action_required",
+      "findings": [
+        "udyam_date_mismatch"
+      ],
+      "documents": [
+        {
+          "kind": "gst",
+          "status": "matched",
+          "codes": []
+        },
+        {
+          "kind": "udyam",
+          "status": "mismatch_detected",
+          "codes": [
+            "udyam_date_mismatch"
+          ]
+        },
+        {
+          "kind": "address",
+          "status": "matched",
+          "codes": []
+        },
+        {
+          "kind": "signatory",
+          "status": "matched",
+          "codes": []
+        }
+      ]
+    },
+    {
+      "applicant": "K10",
+      "independentLeadMatched": true,
+      "overallStatus": "action_required",
+      "findings": [
+        "invalid_checksum",
+        "registration_number_mismatch",
+        "udyam_activity_mismatch",
+        "udyam_date_mismatch",
+        "name_mismatch"
+      ],
+      "documents": [
+        {
+          "kind": "gst",
+          "status": "invalid_checksum",
+          "codes": [
+            "invalid_checksum",
+            "registration_number_mismatch"
+          ]
+        },
+        {
+          "kind": "udyam",
+          "status": "mismatch_detected",
+          "codes": [
+            "udyam_activity_mismatch",
+            "udyam_date_mismatch"
+          ]
+        },
+        {
+          "kind": "address",
+          "status": "matched",
+          "codes": []
+        },
+        {
+          "kind": "signatory",
+          "status": "mismatch_detected",
+          "codes": [
+            "name_mismatch"
+          ]
+        }
+      ]
+    },
+    {
+      "applicant": "K11",
+      "independentLeadMatched": true,
+      "overallStatus": "action_required",
+      "findings": [
+        "udyam_activity_mismatch",
+        "udyam_date_mismatch",
+        "document_expired_or_outdated"
+      ],
+      "documents": [
+        {
+          "kind": "gst",
+          "status": "matched",
+          "codes": []
+        },
+        {
+          "kind": "udyam",
+          "status": "mismatch_detected",
+          "codes": [
+            "udyam_activity_mismatch",
+            "udyam_date_mismatch"
+          ]
+        },
+        {
+          "kind": "address",
+          "status": "outdated_document",
+          "codes": [
+            "document_expired_or_outdated"
+          ]
+        },
+        {
+          "kind": "signatory",
+          "status": "matched",
+          "codes": []
+        }
+      ]
+    },
+    {
+      "applicant": "K12",
+      "independentLeadMatched": true,
+      "overallStatus": "action_required",
+      "findings": [
+        "udyam_activity_mismatch",
+        "udyam_date_mismatch"
+      ],
+      "documents": [
+        {
+          "kind": "gst",
+          "status": "matched",
+          "codes": []
+        },
+        {
+          "kind": "udyam",
+          "status": "mismatch_detected",
+          "codes": [
+            "udyam_activity_mismatch",
+            "udyam_date_mismatch"
+          ]
+        },
+        {
+          "kind": "address",
+          "status": "matched",
+          "codes": []
+        },
+        {
+          "kind": "signatory",
+          "status": "matched",
+          "codes": []
+        }
+      ]
+    }
+  ]
+}

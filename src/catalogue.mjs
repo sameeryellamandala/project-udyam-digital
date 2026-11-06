@@ -209,11 +209,19 @@ export function recommendForNeeds(business, data, requestedQuantities = {}) {
   });
   const best=ordered[0];
   if(!best){
-    const reasons=requested.map(need=>{
-      const blocked=groups[need].map(id=>data.products.find(p=>p.id===id)).filter(Boolean).map(p=>({product:p,reasons:eligibility(p,business,data)}));
-      const explanation=blocked.flatMap(x=>x.reasons.map(reason=>`${x.product.name}: ${reason}`));
-      return business.language==='hi'?`${need}: पात्रता या निर्भरता के कारण इसे पूरे पैकेज में शामिल नहीं कर सके। विवरण या सेवाएँ जाँचें।`:`We could not include ${need} in a complete eligible bundle${explanation.length?` (${[...new Set(explanation)].join('; ')})`:''}. Review the requirements or service availability.`;
+    // A single blocked service must not label every other requested service as
+    // unavailable. Report only standalone eligibility/dependency blockers.
+    const reasons=requested.flatMap(need=>{
+      const products=groups[need].map(id=>data.products.find(p=>p.id===id)).filter(Boolean);
+      const feasible=p=>!eligibility(p,business,data).length&&(!p.requiresOneOf.length||available.some(d=>p.requiresOneOf.includes(d.id)));
+      if(products.some(feasible))return [];
+      return products.map(p=>{
+        const restrictions=eligibility(p,business,data);
+        if(!restrictions.length&&p.requiresOneOf.length)restrictions.push(`needs an eligible supporting service: ${p.requiresOneOf.map(id=>data.products.find(d=>d.id===id)?.name||id).join(', ')}`);
+        return business.language==='hi'?`${p.name}: ${restrictions.join('; ')}। इस सेवा की शर्तें पूरी करें या ज़रूरतें बदलें।`:`${p.name} cannot be included: ${restrictions.join('; ')}. Meet these requirements or change your requested services.`;
+      });
     });
+    if(!reasons.length)reasons.push(business.language==='hi'?'अनुरोधित सेवाओं की निर्भरताएँ एक साथ पूरी नहीं हो सकीं। सेवाओं की शर्तें जाँचें।':'The requested services cannot be combined with their catalogue dependencies. Review the service requirements.');
     warnings.push(...reasons);
     return {profile:business,quote:null,alternatives:[],warnings,eligibleProducts:available,coverage:{requested,covered:[]}};
   }

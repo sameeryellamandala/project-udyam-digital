@@ -9,7 +9,7 @@ test('K06 uses the certificate trade name without hiding independent identifier 
  const row=await readDocument({kind:'gst',dataUrl:'data:image/png;base64,'+readFileSync('YTL_TrackA_Udyam_Digital_Data/kyc_documents/K06_gst_certificate.png').toString('base64')});assert.ok(row.fields.tradeName);assert.ok(row.fields.businessName!==row.fields.tradeName);
  const p=profile({businessName:row.fields.tradeName,segment:'micro',employees:5,sites:1,cityTier:1,budget:5000,needs:['internet']});
  const r=validateKycFields(data,p,{},[row]);assert.ok(!r.findings.some(f=>f.kind==='gst'&&f.code==='business_name_mismatch'));
- if(!gstFormat(row.fields.gstin))assert.ok(r.findings.some(f=>f.code==='invalid_registration_format'));
+ if(!gstFormat(row.fields.gstin))assert.ok(r.findings.some(f=>f.code==='registration_read_uncertain'&&f.severity==='review'));
  assert.ok(/^\d{4}-\d{2}-\d{2}$/.test(row.fields.registrationDate));
  const unrelated=validateKycFields(data,{...p,businessName:'Unrelated fictional company'},{},[row]);assert.ok(unrelated.findings.some(f=>f.code==='business_name_mismatch'));
 });

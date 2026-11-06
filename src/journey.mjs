@@ -28,6 +28,6 @@ export function journeyRecommendation(state,data,checkedBusiness){
  if(business.needs.includes('cctv')&&(!known.has('cameraCount')||!Number.isInteger(details.cameraCount)||details.cameraCount<1))return {quote:null,eligibleProducts:[],options:[],warnings:['Tell the advisor how many cameras you need before reviewing a CCTV package.']};
  if(state.selectedProducts?.length){try{const selected=quote(business,state.selectedProducts,data);return {quote:selected,eligibleProducts:validatedPackages(business,details,data,state).eligibleProducts,options:[],warnings:selected.warnings};}catch{/* Changed eligibility falls back to a new backend-validated recommendation. */}}
  const r=validatedPackages(business,details,data,state);
- return {quote:r.quote,eligibleProducts:r.eligibleProducts,options:r.options,warnings:[...r.warnings,...r.issues]};
+ return {quote:r.quote,eligibleProducts:r.eligibleProducts,options:r.options,warnings:[...new Set([...r.warnings,...r.issues])]};
 }
 export function journeyView(state,revision,data){return {revision,requirements:publicRequirements(state),advisorProfile:state.profile?journeyProfile(state):null,formConfirmed:!!state.formConfirmed,...(data?{recommendation:journeyRecommendation(state,data)}:{})};}
