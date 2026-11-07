@@ -45,7 +45,7 @@ test('kirana requirements survive an additive turn and get one complete catalogu
  assert.equal(result.quote.monthly,2694);assert.equal(result.quote.monthlyMax,3594);assert.equal(result.quote.setup,4300);
  assert.ok(result.quote.warnings.some(x=>/catalogue price range may exceed/.test(x)));
  assert.match(result.reply,/3 postpaid SIM connections/);assert.match(result.reply,/₹2,694–₹3,594/);assert.match(result.reply,/₹4,300/);assert.match(result.reply,/upper estimate is ₹594 over/);
- assert.match(result.reply,/₹299–₹399 per line\/month; line total ₹897–₹1,197\/month/);assert.match(result.reply,/one-time setup ₹2,500/);assert.match(result.reply,/Taxes are excluded/);assert.match(result.reply,/does not place an order/);
+ assert.match(result.reply,/Business Postpaid 299 × 3 — ₹897–₹1,197\/month/);assert.match(result.reply,/one-time setup ₹2,500/);assert.match(result.reply,/Taxes excluded/);assert.match(result.reply,/does not place an order/);
  for(const option of result.options){assert.equal(option.items.find(x=>x.productId==='P07')?.quantity,3);assert.ok(option.items.some(x=>x.productId==='P19'));assert.ok(option.items.some(x=>x.productId==='P23'));assert.ok(option.items.some(x=>['P01','P02','P03','P04','P05','P06'].includes(x.productId)));}
  assert.doesNotMatch(result.reply,/selection list is empty|Static IP/i);
  assert.match(result.reply,/Cloud CCTV must be bundled with a primary connection/);
@@ -232,7 +232,7 @@ test('advisor hides internal selection text and unsupported product dependency c
 test('postpaid quick reply confirms three SIMs and optional browsing preserves state',async()=>{
  const b=profile({...p,employees:4,needs:['internet','mobile'],budget:2000});
  const first=await runAdvisorFlow({},b,[{role:'user',content:'I need three SIM connections.'}],data,{},deps(details({employees:4,budget:2000,needs:['internet','mobile'],mobileLines:3})));
- const yes=await runAdvisorFlow({},first.proposedProfile,[{role:'user',content:'Yes, postpaid connections'}],data,first.conversationState,deps(details({knownFields:[],needs:['internet','mobile'],mobileLines:3})));
+ const yes=await runAdvisorFlow({},first.proposedProfile,[{role:'user',content:'Yes, postpaid connections'}],data,first.conversationState,deps(details({intent:'question',knownFields:[],needs:['internet','mobile'],mobileLines:0})));
  assert.equal(yes.conversationState.postpaidConfirmed,true);
  assert.doesNotMatch(yes.reply,/Would you like postpaid/);
  assert.equal(yes.conversationState.details.mobileLines,3);

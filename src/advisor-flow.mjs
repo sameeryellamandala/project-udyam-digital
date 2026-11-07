@@ -97,8 +97,8 @@ export function formatValidatedBundle(business,details,bundle,data,options=[],in
     if(details.gstStatus==='no')facts.push('no GST registration');
     if(Number.isFinite(business.budget))facts.push(`₹${business.budget.toLocaleString('en-IN')}/month budget`);
   }
-  const lines=bundle.items.map(item=>`${item.locationName?item.locationName+' (Tier '+item.cityTier+'): ':business.locations?.length?'Shared services: ':''}${item.name} × ${item.quantity} — ₹${item.unitPrice.toLocaleString('en-IN')}–₹${item.unitPriceMax.toLocaleString('en-IN')} ${item.unit}/month; line total ₹${item.monthly.toLocaleString('en-IN')}–₹${item.monthlyMax.toLocaleString('en-IN')}/month${item.setup?`; one-time setup ₹${item.setup.toLocaleString('en-IN')}`:''}\n  Why: ${item.reason||data.products.find(p=>p.id===item.productId)?.description||'Matches your requested service.'}`);
-  const out=[`I’ve kept your requested services: ${requested.join(', ')}.`,...(facts.length?[`Business details: ${facts.join(', ')}.`]:[]),`Complete catalogue bundle:\n${lines.map(line=>`• ${line}`).join('\n')}`,`Monthly total: ₹${bundle.monthly.toLocaleString('en-IN')}–₹${bundle.monthlyMax.toLocaleString('en-IN')}. One-time setup: ₹${bundle.setup.toLocaleString('en-IN')}. Taxes are excluded because the catalogue does not provide tax rules.`,`Installation is an estimate of about ${bundle.installDays} days after availability confirmation.`];
+  const lines=bundle.items.map(item=>`• ${item.locationName?item.locationName+': ':''}${item.name} × ${item.quantity} — ₹${item.monthly.toLocaleString('en-IN')}–₹${item.monthlyMax.toLocaleString('en-IN')}/month${item.setup?`; one-time setup ₹${item.setup.toLocaleString('en-IN')}`:''}\n  Why: ${item.reason||data.products.find(p=>p.id===item.productId)?.description||'Matches your requested service.'}`);
+  const out=[`Requested: ${requested.join(', ')}.`,...(facts.length?[facts.join(', ')+'.']:[]),`Complete catalogue bundle:\n${lines.join('\n')}`,`Monthly total: ₹${bundle.monthly.toLocaleString('en-IN')}–₹${bundle.monthlyMax.toLocaleString('en-IN')}. One-time setup: ₹${bundle.setup.toLocaleString('en-IN')}. Taxes excluded.`,`Installation is an estimate: ${bundle.installDays} days after availability confirmation.`];
   const completeAlternatives=options.filter(option=>option.label==='Complete lower-cost alternative');
   if(bundle.monthly>business.budget){
     const alternative=completeAlternatives.find(option=>option.quote.monthly<=business.budget);
@@ -122,6 +122,15 @@ export function formatValidatedBundle(business,details,bundle,data,options=[],in
   return out.map(line=>/over|No complete|Catalogue requirement:/.test(line)?'Warning: '+line:line).join('\n\n');
 }
 
+export function compactAdvisorReply(reply){
+  const parts=String(reply||'').split(/\n+|(?<=[.!?])\s+/).map(x=>x.trim()).filter(Boolean);
+  const warnings=parts.filter(x=>/warning:|budget|GST|dependenc|confirmation|estimate|tax/i.test(x));
+  const body=parts.filter(x=>!warnings.includes(x));
+  const kept=[];let count=0;
+  for(const part of body){const words=part.split(/\s+/).length;if(count+words<=100){kept.push(part);count+=words;}}
+  return [...kept,...warnings].map(x=>'- '+x.replace(/^[-•]\s*/, '')).join('\n');
+}
+
 function removeUnsupportedDependencyClaims(reply,data){
   const parts=String(reply||'').split(/(?<=[.!?])\s+|\n/).filter(Boolean);
   return parts.filter(sentence=>{
@@ -137,9 +146,11 @@ function removeUnsupportedDependencyClaims(reply,data){
 async function answerAdvisorQuestion(config,business,messages,data,previous,question,api,journeyContext={}){
   const latestQuestion=String(messages.filter(m=>m.role==='user').at(-1)?.content||'').trim();
   if(/^show other eligible services[.!]?$/i.test(latestQuestion)){
-    const needs=previous.profile?.needs||business.needs||[];
-    const candidates=data.products.filter(p=>!p.requiresGst&&p.tiers.includes(business.cityTier)&&p.minEmployees<=business.employees&&p.minSites<=business.sites&&!p.requiresOneOf?.length).slice(0,3);
-    const lines=['Your saved requirements are unchanged.',...candidates.map(p=>`- ${p.name}: ₹${p.price.toLocaleString('en-IN')}–₹${p.maxPrice.toLocaleString('en-IN')} / ${p.unit} / month. ${p.description}`),'Warning: These are optional catalogue choices, not additions to your package. A complete price and eligibility check is needed before claiming they fit your budget.','Which service would you like to discuss?'];
+    const tools=createAdvisorTools(business,data);
+    const selected=previous.items||[];
+    const candidates=data.products.filter(p=>tools.check_product_eligibility(p.id).eligible&&tools.check_product_dependencies([...selected,{productId:p.id}]).length===0)
+      .sort((a,b)=>a.price-b.price||a.id.localeCompare(b.id)).slice(0,3);
+    const lines=['Your saved requirements are unchanged.',...candidates.map(p=>`- ${p.name}: ₹${p.price.toLocaleString('en-IN')}–₹${p.maxPrice.toLocaleString('en-IN')} / ${p.unit} / month. ${p.description}`),'Warning: Optional choices only. Nothing has been added. Complete pricing and provider availability still need confirmation.',...(candidates.length?[]:['No additional eligible options were found for the current details.']),'Which service would you like to discuss?'];
     return {mode:'ai',reply:lines.join('\n\n'),replySource:'catalogue',intent:'question',proceed:false,conversationState:previous};
   }
   const known=previous.details?.knownFields||[];
@@ -160,7 +171,7 @@ async function answerAdvisorQuestion(config,business,messages,data,previous,ques
       [{role:'user',content:JSON.stringify({question:api.redact(messages.filter(m=>m.role==='user').at(-1)?.content||''),selectedRequirements,selectedItems,catalogue:catalogue.map(({name,description,unit,requiresOneOf,requiresGst})=>({name,description,unit,requiresOneOf,requiresGst}))})}]);
     reply=api.checkedReply(repaired.reply,null,undefined,[]);
   }
-  reply=removeUnsupportedDependencyClaims(reply,data);
+  reply=compactAdvisorReply(removeUnsupportedDependencyClaims(reply,data));
   if(!reply)reply='I’ll check product requirements directly against the catalogue. Which service would you like me to review?';
   return {mode:'ai',reply,replySource:'model',intent:'question',proceed:false,conversationState:previous};
 }
@@ -185,6 +196,9 @@ export async function runAdvisorFlow(config,business,messages,data,previous,api,
   const remembered=previous.details||{};
   const context={conversation:messages.map(m=>({role:m.role,content:api.redact(m.content)}))};
   let details=preExtracted||await extractAdvisorRequirements(config,business,messages,data,previous,api);
+  const pendingPostpaid=/postpaid/i.test(previous.awaitingQuestion||'');
+  const confirmsPostpaid=pendingPostpaid&&/^(?:yes|sure|ok|okay)\b/i.test(latestMessage.trim())&&!/\b(?:no|not|instead)\b/i.test(latestMessage);
+  if(confirmsPostpaid){details.intent='requirements';details.action='recommend';details.mobilePlanType='postpaid';details.mobileLines=remembered.mobileLines;details.knownFields=details.knownFields.filter(k=>k!=='mobileLines');}
   const cameraAnswer=cameraCountAnswer(latestMessage,previous.awaitingQuestion||'');
   if(cameraAnswer!==null){details.intent='requirements';details.action='recommend';details.cameraCount=cameraAnswer;details.locations=(remembered.locations||[]).map(location=>({...location,cameraCount:null}));if(!details.knownFields.includes('cameraCount'))details.knownFields.push('cameraCount');}
   const questionText=messages.filter(m=>m.role==='user').at(-1)?.content||'';
