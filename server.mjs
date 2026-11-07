@@ -90,10 +90,10 @@ export function createApp(options = {}) {
       }
       limit('ip:' + req.socket.remoteAddress, 240);
       if (!['GET', 'HEAD'].includes(req.method)) {
-        if (req.headers.origin !== 'http://' + req.headers.host || req.headers['sec-fetch-site'] === 'cross-site') throw new AppError('Use the app from its original browser tab.', 403, 'WRONG_ORIGIN');
+        if (req.headers.origin !== (process.env.PUBLIC_ORIGIN || 'http://' + req.headers.host) || req.headers['sec-fetch-site'] === 'cross-site') throw new AppError('Use the app from its original browser tab.', 403, 'WRONG_ORIGIN');
       }
       if(req.method==='GET'&&path==='/api/auth/config'){send(200,{...auth.publicConfig,required:requireCustomerAuth});return;}
-      const identity=await auth.identity(req,'http://'+req.headers.host);
+      const identity=await auth.identity(req,process.env.PUBLIC_ORIGIN || 'http://'+req.headers.host);
       const token = /(?:^|;\s*)udyam_session=([a-f0-9]{64})(?:;|$)/.exec(req.headers.cookie || '')?.[1];
       const guest = store.session(token);
       const session = identity?store.accountSession(identity.owner):guest;
