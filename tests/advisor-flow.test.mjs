@@ -228,3 +228,15 @@ test('advisor hides internal selection text and unsupported product dependency c
  assert.doesNotMatch(result.reply,/selection list is empty|Static IP/i);
  assert.match(result.reply,/check product requirements directly against the catalogue/i);
 });
+
+test('postpaid quick reply confirms three SIMs and optional browsing preserves state',async()=>{
+ const b=profile({...p,employees:4,needs:['internet','mobile'],budget:2000});
+ const first=await runAdvisorFlow({},b,[{role:'user',content:'I need three SIM connections.'}],data,{},deps(details({employees:4,budget:2000,needs:['internet','mobile'],mobileLines:3})));
+ const yes=await runAdvisorFlow({},first.proposedProfile,[{role:'user',content:'Yes, postpaid connections'}],data,first.conversationState,deps(details({knownFields:[],needs:['internet','mobile'],mobileLines:3})));
+ assert.equal(yes.conversationState.postpaidConfirmed,true);
+ assert.doesNotMatch(yes.reply,/Would you like postpaid/);
+ assert.equal(yes.conversationState.details.mobileLines,3);
+ const browse=await runAdvisorFlow({},yes.proposedProfile,[{role:'user',content:'Show other eligible services'}],data,yes.conversationState,deps(details({intent:'question',knownFields:[]})));
+ assert.deepEqual(browse.conversationState,yes.conversationState);
+ assert.match(browse.reply,/Warning:/);assert.ok(browse.reply.split(/\s+/).length<180);
+});
