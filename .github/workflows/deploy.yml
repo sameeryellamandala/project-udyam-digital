@@ -1,0 +1,76 @@
+name: Deploy
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ec2-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: >-
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_repository.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Configure verified SSH access
+        env:
+          DEPLOY_KEY: ${{ secrets.EC2_SSH_KEY }}
+          KNOWN_HOSTS: ${{ secrets.EC2_KNOWN_HOSTS }}
+        run: |
+          set -eu
+          test -n "$DEPLOY_KEY"
+          test -n "$KNOWN_HOSTS"
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$DEPLOY_KEY" > ~/.ssh/deploy_key
+          printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/deploy_key ~/.ssh/known_hosts
+      - name: Deploy tested commit
+        env:
+          EC2_HOST: ${{ secrets.EC2_HOST }}
+          EC2_USER: ${{ secrets.EC2_USER }}
+          DEPLOY_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          set -eu
+          [[ "$DEPLOY_SHA" =~ ^[0-9a-f]{40}$ ]]
+          [[ "$EC2_HOST" =~ ^[a-zA-Z0-9.-]+$ ]]
+          [[ "$EC2_USER" =~ ^[a-zA-Z0-9_-]+$ ]]
+          ssh -i ~/.ssh/deploy_key -o BatchMode=yes -o StrictHostKeyChecking=yes -o ConnectTimeout=20 -o ServerAliveInterval=30 "$EC2_USER@$EC2_HOST" "bash -s -- $DEPLOY_SHA" <<'REMOTE'
+          set -euo pipefail
+          cd /home/ubuntu/project-udyam-digital
+          exec 9>/home/ubuntu/.udyam-deploy.lock
+          flock -n 9
+          test -f .env
+          test -z "$(git status --porcelain --untracked-files=no)"
+          test "$(git branch --show-current)" = main
+          git fetch origin main
+          if [ "$(git rev-parse origin/main)" != "$1" ]; then
+            echo 'Skipping superseded deployment; a newer main commit exists.'
+            exit 0
+          fi
+          git merge --ff-only "$1"
+          npm ci
+          npm run db:migrate
+          sudo -n /usr/bin/systemctl restart udyam.service
+          for attempt in $(seq 1 15); do
+            if curl --fail --silent --output /dev/null http://127.0.0.1:3000/; then
+              echo 'Deployment health check passed.'
+              exit 0
+            fi
+            sleep 2
+          done
+          echo 'Deployment health check failed. Inspect the Udyam service on EC2.' >&2
+          exit 1
+          REMOTE
+      - name: Remove deployment key
+        if: always()
+        run: rm -f ~/.ssh/deploy_key
