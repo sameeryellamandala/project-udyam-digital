@@ -36,3 +36,6 @@
 
 .advisor-quick-options{display:flex;flex-wrap:wrap;gap:8px;padding:8px 0}.advisor-quick-options button{border:1px solid #b7d4c7;border-radius:18px;padding:8px 12px;background:#f2f8f4;text-align:left;white-space:normal;max-width:100%}
 
+
+.chat-compose{flex-wrap:wrap}.voice-input-button{min-width:44px;min-height:44px}.voice-input-button[aria-pressed="true"]{background:#ffe5e5}#voice-input-status:not(.sr-only){flex-basis:100%;font-size:12px;order:5;color:#375d52}
+.advisor-panel{min-width:min(300px,calc(100vw - 24px))}

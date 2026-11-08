@@ -1,3 +1,5 @@
+import {regionalLocales} from './regional-locales.js';
+export const languageNames={en:'English',hi:'Hindi',te:'Telugu',ta:'Tamil',kn:'Kannada',ml:'Malayalam',mr:'Marathi'};
 // Canonical product names stay as supplied; descriptions and customer controls are localized.
 const hindi = {
  'Sign in':'साइन इन','Sign out':'साइन आउट','Retry sign-in':'साइन इन फिर आज़माएँ','Sign-in not configured':'साइन-इन सेटअप नहीं है',
@@ -98,7 +100,8 @@ Object.assign(hindi,{
  'No complete eligible package fits the requested requirements and budget.':'चुनी ज़रूरतों और बजट में कोई पूरा पात्र पैकेज नहीं मिलता।',
 });
 export function translateMessage(value,language){
- if(language!=='hi')return value;
+ if(language!=='hi'){const dict=regionalLocales[language];if(!dict)return value;const text=String(value),key=text.trim();if(dict[key])return text.replace(key,dict[key]);let localized=text;for(const [en,value] of Object.entries(dict).sort((a,b)=>b[0].length-a[0].length))if(en.length>=12)localized=localized.replaceAll(en,value);return localized;}
+ const extra=regionalLocales[language]?.[String(value).trim()];if(extra)return String(value).replace(String(value).trim(),extra);
  const trimmed=String(value).trim(); if(hindi[trimmed])return String(value).replace(trimmed,hindi[trimmed]);
  const match=/^(gst|udyam|address|signatory): (.+)$/.exec(trimmed);if(match&&fieldIssues[match[2]])return docLabels[match[1]]+': '+fieldIssues[match[2]];
  let result=String(value);

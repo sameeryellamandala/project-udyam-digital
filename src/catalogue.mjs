@@ -66,7 +66,7 @@ export function profile(raw = {}) {
   }
   return { businessName, segment: raw.segment, employees: integer(raw.employees, 1, 10000, 'Team size'), sites,
     cityTier: integer(raw.cityTier, 1, 2, 'City tier'), budget: integer(raw.budget, 1, 10000000, 'Budget'), needs: [...new Set(raw.needs)].sort(),
-    cameraCount,currentTools: text(raw.currentTools || '', 500), language: raw.language === 'hi' ? 'hi' : 'en',
+    cameraCount,currentTools: text(raw.currentTools || '', 500), language: ['en','hi','te','ta','kn','ml','mr'].includes(raw.language) ? raw.language : 'en',
     gstin: text(raw.gstin || '', 15).toUpperCase(), udyam: text(raw.udyam || '', 19).toUpperCase(),...(locations?{locations}:{}) };
 }
 
